@@ -1,18 +1,19 @@
-from aiofiles import open as aiopen
-from aiofiles.os import path as aiopath, makedirs
 from dotenv import dotenv_values
-from motor.motor_asyncio import AsyncIOMotorClient
-from pymongo.server_api import ServerApi
+from aiofiles import open as aiopen
+from aiofiles.os import path as aiopath
+from aiofiles.os import makedirs
 from pymongo.errors import PyMongoError
+from pymongo.server_api import ServerApi
+from motor.motor_asyncio import AsyncIOMotorClient
 
 from bot import (
-    user_data,
-    rss_dict,
-    LOGGER,
     BOT_ID,
+    LOGGER,
+    rss_dict,
+    user_data,
     config_dict,
-    aria2_options,
     qbit_options,
+    aria2_options,
 )
 
 
@@ -217,7 +218,9 @@ class DbManager:
     async def add_incomplete_task(self, cid, link, tag):
         if self._return:
             return
-        await self._db.tasks[BOT_ID].insert_one({"_id": link, "cid": cid, "tag": tag})
+        await self._db.tasks[BOT_ID].insert_one(
+            {"_id": link, "cid": cid, "tag": tag}
+        )
 
     async def rm_complete_task(self, link):
         if self._return:

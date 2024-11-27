@@ -2,13 +2,13 @@ from pyrogram.filters import command
 from pyrogram.handlers import MessageHandler
 
 from bot import bot
-from ..helper.ext_utils.bot_utils import sync_to_async, new_task
-from ..helper.ext_utils.links_utils import is_gdrive_link
-from ..helper.ext_utils.status_utils import get_readable_file_size
-from ..helper.mirror_leech_utils.gdrive_utils.count import GoogleDriveCount
-from ..helper.telegram_helper.bot_commands import BotCommands
-from ..helper.telegram_helper.filters import CustomFilters
-from ..helper.telegram_helper.message_utils import delete_message, send_message
+from bot.helper.ext_utils.bot_utils import new_task, sync_to_async
+from bot.helper.ext_utils.links_utils import is_gdrive_link
+from bot.helper.ext_utils.status_utils import get_readable_file_size
+from bot.helper.telegram_helper.filters import CustomFilters
+from bot.helper.telegram_helper.bot_commands import BotCommands
+from bot.helper.telegram_helper.message_utils import send_message, delete_message
+from bot.helper.mirror_leech_utils.gdrive_utils.count import GoogleDriveCount
 
 
 @new_task
@@ -41,9 +41,7 @@ async def countNode(_, message):
             msg += f"\n<b>Files: </b>{files}"
         msg += f"\n\n<b>cc: </b>{tag}"
     else:
-        msg = (
-            "Send Gdrive link along with command or by replying to the link by command"
-        )
+        msg = "Send Gdrive link along with command or by replying to the link by command"
 
     await send_message(message, msg)
 

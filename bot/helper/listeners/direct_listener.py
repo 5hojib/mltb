@@ -1,7 +1,7 @@
 from time import sleep
 
 from bot import LOGGER, aria2
-from ..ext_utils.bot_utils import async_to_sync, sync_to_async
+from bot.helper.ext_utils.bot_utils import async_to_sync, sync_to_async
 
 
 class DirectListener:
@@ -57,7 +57,7 @@ class DirectListener:
                     )
                     self.download_task.remove(True, True)
                     break
-                elif self.download_task.is_complete:
+                if self.download_task.is_complete:
                     self._proc_bytes += self.download_task.total_length
                     self.download_task.remove(True)
                     break

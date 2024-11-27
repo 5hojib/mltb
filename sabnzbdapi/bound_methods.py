@@ -1,5 +1,4 @@
 class SubFunctions:
-
     def __init__(self):
         pass
 
@@ -8,8 +7,7 @@ class SubFunctions:
         if res["config"]:
             self.LOGGED_IN = True
             return res["config"]
-        else:
-            return False
+        return False
 
     async def add_server(self, server: dict):
         """server = {
@@ -34,7 +32,9 @@ class SubFunctions:
         return await self.set_special_config("servers", server)
 
     async def create_category(self, name: str, dir: str):
-        return await self.set_special_config("categories", {"name": name, "dir": dir})
+        return await self.set_special_config(
+            "categories", {"name": name, "dir": dir}
+        )
 
     async def delete_category(self, name: str):
         return await self.delete_config("categories", name)

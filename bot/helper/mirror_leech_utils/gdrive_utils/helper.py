@@ -1,22 +1,24 @@
-from google.oauth2 import service_account
-from googleapiclient.discovery import build
-from google_auth_httplib2 import AuthorizedHttp
-from googleapiclient.http import build_http
-from logging import getLogger, ERROR
-from os import path as ospath, listdir
+from os import path as ospath
+from os import listdir
+from re import search as re_search
 from pickle import load as pload
 from random import randrange
-from re import search as re_search
+from logging import ERROR, getLogger
+from urllib.parse import parse_qs, urlparse
+
 from tenacity import (
     retry,
     wait_exponential,
     stop_after_attempt,
     retry_if_exception_type,
 )
-from urllib.parse import parse_qs, urlparse
+from google.oauth2 import service_account
+from google_auth_httplib2 import AuthorizedHttp
+from googleapiclient.http import build_http
+from googleapiclient.discovery import build
 
 from bot import config_dict
-from ...ext_utils.links_utils import is_gdrive_id
+from bot.helper.ext_utils.links_utils import is_gdrive_id
 
 LOGGER = getLogger(__name__)
 getLogger("googleapiclient.discovery").setLevel(ERROR)
@@ -30,7 +32,9 @@ class GoogleDriveHelper:
         self.G_DRIVE_BASE_DOWNLOAD_URL = (
             "https://drive.google.com/uc?id={}&export=download"
         )
-        self.G_DRIVE_DIR_BASE_DOWNLOAD_URL = "https://drive.google.com/drive/folders/{}"
+        self.G_DRIVE_DIR_BASE_DOWNLOAD_URL = (
+            "https://drive.google.com/drive/folders/{}"
+        )
         self.is_uploading = False
         self.is_downloading = False
         self.is_cloning = False
@@ -65,7 +69,9 @@ class GoogleDriveHelper:
                 self.status.total_size * self.status.progress()
                 - self.file_processed_bytes
             )
-            self.file_processed_bytes = self.status.total_size * self.status.progress()
+            self.file_processed_bytes = (
+                self.status.total_size * self.status.progress()
+            )
             self.proc_bytes += chunk_size
             self.total_time += self.update_interval
 
@@ -75,7 +81,9 @@ class GoogleDriveHelper:
             json_files = listdir("accounts")
             self.sa_number = len(json_files)
             self.sa_index = randrange(self.sa_number)
-            LOGGER.info(f"Authorizing with {json_files[self.sa_index]} service account")
+            LOGGER.info(
+                f"Authorizing with {json_files[self.sa_index]} service account"
+            )
             credentials = service_account.Credentials.from_service_account_file(
                 f"accounts/{json_files[self.sa_index]}", scopes=self._OAUTH_SCOPE
             )
@@ -210,7 +218,9 @@ class GoogleDriveHelper:
         file_id = file.get("id")
         if not config_dict["IS_TEAM_DRIVE"]:
             self.set_permission(file_id)
-        LOGGER.info(f'Created G-Drive Folder:\nName: {file.get("name")}\nID: {file_id}')
+        LOGGER.info(
+            f'Created G-Drive Folder:\nName: {file.get("name")}\nID: {file_id}'
+        )
         return file_id
 
     def escapes(self, estr):

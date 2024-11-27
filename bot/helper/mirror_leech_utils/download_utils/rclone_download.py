@@ -1,15 +1,19 @@
-from asyncio import gather
 from json import loads
+from asyncio import gather
 from secrets import token_urlsafe
+
 from aiofiles.os import remove
 
-from bot import task_dict, task_dict_lock, LOGGER
-from ...ext_utils.bot_utils import cmd_exec
-from ...ext_utils.task_manager import check_running_tasks, stop_duplicate_check
-from ...mirror_leech_utils.rclone_utils.transfer import RcloneTransferHelper
-from ...mirror_leech_utils.status_utils.queue_status import QueueStatus
-from ...mirror_leech_utils.status_utils.rclone_status import RcloneStatus
-from ...telegram_helper.message_utils import send_status_message
+from bot import LOGGER, task_dict, task_dict_lock
+from bot.helper.ext_utils.bot_utils import cmd_exec
+from bot.helper.ext_utils.task_manager import (
+    check_running_tasks,
+    stop_duplicate_check,
+)
+from bot.helper.telegram_helper.message_utils import send_status_message
+from bot.helper.mirror_leech_utils.rclone_utils.transfer import RcloneTransferHelper
+from bot.helper.mirror_leech_utils.status_utils.queue_status import QueueStatus
+from bot.helper.mirror_leech_utils.status_utils.rclone_status import RcloneStatus
 
 
 async def add_rclone_download(listener, path):
@@ -53,7 +57,10 @@ async def add_rclone_download(listener, path):
         res = await cmd_exec(cmd2)
         if res[2] != 0:
             if res[2] != -9:
-                err = (res[1]or "Use <code>/shell cat rlog.txt</code> to see more information")
+                err = (
+                    res[1]
+                    or "Use <code>/shell cat rlog.txt</code> to see more information"
+                )
                 msg = f"Error: While getting rclone stat/size. Path: {remote}:{listener.link}. Stderr: {err[:4000]}"
                 await listener.on_download_error(msg)
             return
@@ -86,7 +93,7 @@ async def add_rclone_download(listener, path):
             if not str(err):
                 err = "Use <code>/shell cat rlog.txt</code> to see more information"
             await listener.on_download_error(f"RcloneDownload JsonLoad: {err}")
-            return    
+            return
         if rstat["IsDir"]:
             if not listener.name:
                 listener.name = (

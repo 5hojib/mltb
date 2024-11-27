@@ -1,23 +1,26 @@
-from aiofiles.os import remove, path as aiopath
-from asyncio import sleep
+import contextlib
 from time import time
+from asyncio import sleep
+
+from aiofiles.os import path as aiopath
+from aiofiles.os import remove
 
 from bot import (
-    task_dict,
-    task_dict_lock,
+    LOGGER,
     intervals,
-    qbittorrent_client,
+    task_dict,
     config_dict,
     qb_torrents,
+    task_dict_lock,
     qb_listener_lock,
-    LOGGER,
+    qbittorrent_client,
 )
-from ..ext_utils.bot_utils import new_task, sync_to_async
-from ..ext_utils.files_utils import clean_unwanted
-from ..ext_utils.status_utils import get_readable_time, get_task_by_gid
-from ..ext_utils.task_manager import stop_duplicate_check
-from ..mirror_leech_utils.status_utils.qbit_status import QbittorrentStatus
-from ..telegram_helper.message_utils import update_status_message
+from bot.helper.ext_utils.bot_utils import new_task, sync_to_async
+from bot.helper.ext_utils.files_utils import clean_unwanted
+from bot.helper.ext_utils.status_utils import get_task_by_gid, get_readable_time
+from bot.helper.ext_utils.task_manager import stop_duplicate_check
+from bot.helper.telegram_helper.message_utils import update_status_message
+from bot.helper.mirror_leech_utils.status_utils.qbit_status import QbittorrentStatus
 
 
 async def _remove_torrent(hash_, tag):
@@ -55,9 +58,9 @@ async def _onSeedFinish(tor):
 async def _stop_duplicate(tor):
     if task := await get_task_by_gid(tor.hash[:12]):
         if task.listener.stop_duplicate:
-            task.listener.name = tor.content_path.rsplit("/", 1)[-1].rsplit(".!qB", 1)[
-                0
-            ]
+            task.listener.name = tor.content_path.rsplit("/", 1)[-1].rsplit(
+                ".!qB", 1
+            )[0]
             msg, button = await stop_duplicate_check(task.listener)
             if msg:
                 _on_download_error(msg, tor, button)
@@ -80,10 +83,8 @@ async def _on_download_complete(tor):
             )
             for f in res:
                 if f.priority == 0 and await aiopath.exists(f"{path}/{f.name}"):
-                    try:
+                    with contextlib.suppress(Exception):
                         await remove(f"{path}/{f.name}")
-                    except:
-                        pass
         await task.listener.on_download_complete()
         if intervals["stopAll"]:
             return

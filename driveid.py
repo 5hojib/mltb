@@ -1,5 +1,6 @@
 import os
 import re
+import sys
 
 print(
     "\n\n"
@@ -40,7 +41,7 @@ for count in range(1, num + 1):
     index = input("    Enter Drive INDEX URL (optional) : ")
     if not name or not id:
         print("\n\n        ERROR : Dont leave the name/id without filling.")
-        exit(1)
+        sys.exit(1)
     name = name.replace(" ", "_")
     if index:
         if index[-1] == "/":

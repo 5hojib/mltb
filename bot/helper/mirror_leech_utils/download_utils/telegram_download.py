@@ -1,18 +1,22 @@
-from asyncio import Lock, sleep
 from time import time
+from asyncio import Lock, sleep
+
 from pyrogram.errors import FloodWait, FloodPremiumWait
 
 from bot import (
     LOGGER,
-    task_dict,
-    task_dict_lock,
     bot,
     user,
+    task_dict,
+    task_dict_lock,
 )
-from ...ext_utils.task_manager import check_running_tasks, stop_duplicate_check
-from ...mirror_leech_utils.status_utils.queue_status import QueueStatus
-from ...mirror_leech_utils.status_utils.telegram_status import TelegramStatus
-from ...telegram_helper.message_utils import send_status_message
+from bot.helper.ext_utils.task_manager import (
+    check_running_tasks,
+    stop_duplicate_check,
+)
+from bot.helper.telegram_helper.message_utils import send_status_message
+from bot.helper.mirror_leech_utils.status_utils.queue_status import QueueStatus
+from bot.helper.mirror_leech_utils.status_utils.telegram_status import TelegramStatus
 
 global_lock = Lock()
 GLOBAL_GID = set()
@@ -48,7 +52,9 @@ class TelegramDownloadHelper:
                 await send_status_message(self._listener.message)
             LOGGER.info(f"Download from Telegram: {self._listener.name}")
         else:
-            LOGGER.info(f"Start Queued Download from Telegram: {self._listener.name}")
+            LOGGER.info(
+                f"Start Queued Download from Telegram: {self._listener.name}"
+            )
 
     async def _onDownloadProgress(self, current, total):
         if self._listener.is_cancelled:

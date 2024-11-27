@@ -1,24 +1,28 @@
-from aiofiles.os import path as aiopath
-from asyncio import wait_for, Event, gather
-from functools import partial
-from logging import getLogger
-from natsort import natsorted
-from pyrogram.filters import regex, user
-from pyrogram.handlers import CallbackQueryHandler
-from tenacity import RetryError
 from time import time
+from asyncio import Event, gather, wait_for
+from logging import getLogger
+from functools import partial
+
+from natsort import natsorted
+from tenacity import RetryError
+from aiofiles.os import path as aiopath
+from pyrogram.filters import user, regex
+from pyrogram.handlers import CallbackQueryHandler
 
 from bot import config_dict
-from ...ext_utils.bot_utils import update_user_ldata, new_task
-from ...ext_utils.db_handler import database
-from ...ext_utils.status_utils import get_readable_file_size, get_readable_time
-from ...mirror_leech_utils.gdrive_utils.helper import GoogleDriveHelper
-from ...telegram_helper.button_build import ButtonMaker
-from ...telegram_helper.message_utils import (
-    send_message,
+from bot.helper.ext_utils.bot_utils import new_task, update_user_ldata
+from bot.helper.ext_utils.db_handler import database
+from bot.helper.ext_utils.status_utils import (
+    get_readable_time,
+    get_readable_file_size,
+)
+from bot.helper.telegram_helper.button_build import ButtonMaker
+from bot.helper.telegram_helper.message_utils import (
     edit_message,
+    send_message,
     delete_message,
 )
+from bot.helper.mirror_leech_utils.gdrive_utils.helper import GoogleDriveHelper
 
 LOGGER = getLogger(__name__)
 
@@ -155,7 +159,9 @@ class GoogleDriveList(GoogleDriveHelper):
     async def _send_list_message(self, msg, button):
         if not self.listener.is_cancelled:
             if self._reply_to is None:
-                self._reply_to = await send_message(self.listener.message, msg, button)
+                self._reply_to = await send_message(
+                    self.listener.message, msg, button
+                )
             else:
                 await edit_message(self._reply_to, msg, button)
 
@@ -177,7 +183,9 @@ class GoogleDriveList(GoogleDriveHelper):
                 name = item["name"]
             else:
                 ptype = "fi"
-                name = f"[{get_readable_file_size(float(item['size']))}] {item['name']}"
+                name = (
+                    f"[{get_readable_file_size(float(item['size']))}] {item['name']}"
+                )
             buttons.data_button(name, f"gdq pa {ptype} {orig_index}")
         if items_no > LIST_LIMIT:
             for i in [1, 2, 4, 6, 10, 30, 50, 100]:
@@ -188,16 +196,15 @@ class GoogleDriveList(GoogleDriveHelper):
             if self.item_type == "folders":
                 buttons.data_button("Files", "gdq itype files", position="footer")
             else:
-                buttons.data_button("Folders", "gdq itype folders", position="footer")
+                buttons.data_button(
+                    "Folders", "gdq itype folders", position="footer"
+                )
         if self.list_status == "gdu" or len(self.items_list) > 0:
             buttons.data_button("Choose Current Path", "gdq cur", position="footer")
         if self.list_status == "gdu":
             buttons.data_button("Set as Default Path", "gdq def", position="footer")
-        if (
-            len(self.parents) > 1
-            and len(self.drives) > 1
-            or self._token_user
-            and self._token_owner
+        if (len(self.parents) > 1 and len(self.drives) > 1) or (
+            self._token_user and self._token_owner
         ):
             buttons.data_button("Back", "gdq back pa", position="footer")
         if len(self.parents) > 1:
@@ -220,7 +227,9 @@ class GoogleDriveList(GoogleDriveHelper):
         msg += f"\n\nItem Type: {self.item_type}\nToken Path: {self.token_path}"
         msg += f"\n\nCurrent ID: <code>{self.id}</code>"
         msg += f"\nCurrent Path: <code>{('/').join(i['name'] for i in self.parents)}</code>"
-        msg += f"\nTimeout: {get_readable_time(self._timeout - (time() - self._time))}"
+        msg += (
+            f"\nTimeout: {get_readable_time(self._timeout - (time() - self._time))}"
+        )
         await self._send_list_message(msg, button)
 
     async def get_items(self, itype=""):
@@ -231,14 +240,14 @@ class GoogleDriveList(GoogleDriveHelper):
         try:
             files = self.get_files_by_folder_id(self.id, self.item_type)
             if self.listener.is_cancelled:
-                return
+                return None
         except Exception as err:
             if isinstance(err, RetryError):
                 LOGGER.info(f"Total Attempts: {err.last_attempt.attempt_number}")
                 err = err.last_attempt.exception()
             self.id = str(err).replace(">", "").replace("<", "")
             self.event.set()
-            return
+            return None
         if len(files) == 0 and itype != self.item_type and self.list_status == "gdd":
             itype = "folders" if self.item_type == "files" else "files"
             self.item_type = itype
@@ -246,6 +255,7 @@ class GoogleDriveList(GoogleDriveHelper):
         self.items_list = natsorted(files)
         self.iter_start = 0
         await self.get_items_buttons()
+        return None
 
     async def list_drives(self):
         self.service = self.authorize()
@@ -281,9 +291,7 @@ class GoogleDriveList(GoogleDriveHelper):
                 else "\nTransfer Type: <i>Upload</i>"
             )
             msg += f"\nToken Path: {self.token_path}"
-            msg += (
-                f"\nTimeout: {get_readable_time(self._timeout - (time() - self._time))}"
-            )
+            msg += f"\nTimeout: {get_readable_time(self._timeout - (time() - self._time))}"
             buttons = ButtonMaker()
             self.drives.clear()
             self.parents.clear()
@@ -301,21 +309,16 @@ class GoogleDriveList(GoogleDriveHelper):
 
     async def choose_token(self):
         if (
-            self._token_user
-            and self._token_owner
-            or self._sa_owner
-            and self._token_owner
-            or self._sa_owner
-            and self._token_user
+            (self._token_user and self._token_owner)
+            or (self._sa_owner and self._token_owner)
+            or (self._sa_owner and self._token_user)
         ):
             msg = "Choose Token:" + (
                 "\nTransfer Type: Download"
                 if self.list_status == "gdd"
                 else "\nTransfer Type: Upload"
             )
-            msg += (
-                f"\nTimeout: {get_readable_time(self._timeout - (time() - self._time))}"
-            )
+            msg += f"\nTimeout: {get_readable_time(self._timeout - (time() - self._time))}"
             buttons = ButtonMaker()
             if self._token_owner:
                 buttons.data_button("Owner Token", "gdq owner")
@@ -371,6 +374,5 @@ class GoogleDriveList(GoogleDriveHelper):
         if not self.listener.is_cancelled:
             if self.token_path == self.user_token_path:
                 return f"mtp:{self.id}"
-            else:
-                return f"sa:{self.id}" if self.use_sa else f"tp:{self.id}"
+            return f"sa:{self.id}" if self.use_sa else f"tp:{self.id}"
         return self.id

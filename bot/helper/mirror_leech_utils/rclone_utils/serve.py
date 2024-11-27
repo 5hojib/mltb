@@ -1,7 +1,8 @@
-from aiofiles import open as aiopen
-from aiofiles.os import path as aiopath
 from asyncio import create_subprocess_exec
 from configparser import ConfigParser
+
+from aiofiles import open as aiopen
+from aiofiles.os import path as aiopath
 
 from bot import config_dict
 
@@ -9,7 +10,9 @@ RcloneServe = []
 
 
 async def rclone_serve_booter():
-    if not config_dict["RCLONE_SERVE_URL"] or not await aiopath.exists("rclone.conf"):
+    if not config_dict["RCLONE_SERVE_URL"] or not await aiopath.exists(
+        "rclone.conf"
+    ):
         if RcloneServe:
             try:
                 RcloneServe[0].kill()
@@ -18,7 +21,7 @@ async def rclone_serve_booter():
                 pass
         return
     config = ConfigParser()
-    async with aiopen("rclone.conf", "r") as f:
+    async with aiopen("rclone.conf") as f:
         contents = await f.read()
         config.read_string(contents)
     if not config.has_section("combine"):

@@ -1,66 +1,59 @@
-from aiofiles import open as aiopen
-from aiofiles.os import path as aiopath, remove
-from asyncio import gather, create_subprocess_exec
+import contextlib
 from os import execl as osexecl
+from sys import executable
+from time import time
+from signal import SIGINT, signal
+from asyncio import gather, create_subprocess_exec
+
 from psutil import (
+    boot_time,
+    cpu_count,
     disk_usage,
     cpu_percent,
     swap_memory,
-    cpu_count,
     virtual_memory,
     net_io_counters,
-    boot_time,
 )
+from aiofiles import open as aiopen
+from aiofiles.os import path as aiopath
+from aiofiles.os import remove
 from pyrogram.filters import command
 from pyrogram.handlers import MessageHandler
-from signal import signal, SIGINT
-from sys import executable
-from time import time
 
 from bot import (
-    bot,
-    botStartTime,
     LOGGER,
+    bot,
     intervals,
-    config_dict,
     scheduler,
+    config_dict,
+    botStartTime,
     sabnzbd_client,
 )
-from .helper.ext_utils.telegraph_helper import telegraph
+
+from .modules import (
+    bot_settings,
+)
 from .helper.ext_utils.bot_utils import (
     cmd_exec,
+    new_task,
     sync_to_async,
     create_help_buttons,
-    new_task,
 )
 from .helper.ext_utils.db_handler import database
 from .helper.ext_utils.files_utils import clean_all, exit_clean_up
-from .helper.ext_utils.jdownloader_booter import jdownloader
-from .helper.ext_utils.status_utils import get_readable_file_size, get_readable_time
+from .helper.ext_utils.status_utils import get_readable_time, get_readable_file_size
+from .helper.telegram_helper.filters import CustomFilters
 from .helper.listeners.aria2_listener import start_aria2_listener
-from .helper.mirror_leech_utils.rclone_utils.serve import rclone_serve_booter
+from .helper.ext_utils.telegraph_helper import telegraph
+from .helper.ext_utils.jdownloader_booter import jdownloader
 from .helper.telegram_helper.bot_commands import BotCommands
 from .helper.telegram_helper.button_build import ButtonMaker
-from .helper.telegram_helper.filters import CustomFilters
-from .helper.telegram_helper.message_utils import send_message, edit_message, send_file
-from .modules import (
-    authorize,
-    cancel_task,
-    clone,
-    exec,
-    file_selector,
-    gd_count,
-    gd_delete,
-    gd_search,
-    mirror_leech,
-    status,
-    ytdlp,
-    shell,
-    users_settings,
-    bot_settings,
-    help,
-    force_start,
+from .helper.telegram_helper.message_utils import (
+    send_file,
+    edit_message,
+    send_message,
 )
+from .helper.mirror_leech_utils.rclone_utils.serve import rclone_serve_booter
 
 
 @new_task
@@ -239,7 +232,9 @@ async def restart_notification():
     if config_dict["INCOMPLETE_TASK_NOTIFIER"] and config_dict["DATABASE_URL"]:
         if notifier_dict := await database.get_incomplete_tasks():
             for cid, data in notifier_dict.items():
-                msg = "Restarted Successfully!" if cid == chat_id else "Bot Restarted!"
+                msg = (
+                    "Restarted Successfully!" if cid == chat_id else "Bot Restarted!"
+                )
                 for tag, links in data.items():
                     msg += f"\n\n{tag}: "
                     for index, link in enumerate(links, start=1):
@@ -251,12 +246,10 @@ async def restart_notification():
                     await send_incomplete_task_message(cid, msg)
 
     if await aiopath.isfile(".restartmsg"):
-        try:
+        with contextlib.suppress(Exception):
             await bot.edit_message_text(
                 chat_id=chat_id, message_id=msg_id, text="Restarted Successfully!"
             )
-        except:
-            pass
         await remove(".restartmsg")
 
 

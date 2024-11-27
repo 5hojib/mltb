@@ -1,12 +1,12 @@
 from asyncio import gather
 
-from bot import LOGGER, sabnzbd_client, nzb_jobs, nzb_listener_lock
-from ...ext_utils.bot_utils import async_to_sync
-from ...ext_utils.status_utils import (
+from bot import LOGGER, nzb_jobs, sabnzbd_client, nzb_listener_lock
+from bot.helper.ext_utils.bot_utils import async_to_sync
+from bot.helper.ext_utils.status_utils import (
     MirrorStatus,
-    get_readable_file_size,
-    get_readable_time,
     time_to_seconds,
+    get_readable_time,
+    get_readable_file_size,
 )
 
 
@@ -70,12 +70,11 @@ class SabnzbdStatus:
         state = self._info["status"]
         if state == "Paused" and self.queued:
             return MirrorStatus.STATUS_QUEUEDL
-        elif self.cstatus:
+        if self.cstatus:
             return self.cstatus
-        elif state == "Paused":
+        if state == "Paused":
             return MirrorStatus.STATUS_PAUSED
-        else:
-            return MirrorStatus.STATUS_DOWNLOADING
+        return MirrorStatus.STATUS_DOWNLOADING
 
     def task(self):
         return self

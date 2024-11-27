@@ -1,22 +1,24 @@
-from httpx import AsyncClient
-from asyncio.subprocess import PIPE
-from functools import partial, wraps
-from concurrent.futures import ThreadPoolExecutor
 from asyncio import (
+    sleep,
     create_subprocess_exec,
     create_subprocess_shell,
     run_coroutine_threadsafe,
-    sleep,
 )
+from functools import wraps, partial
+from asyncio.subprocess import PIPE
+from concurrent.futures import ThreadPoolExecutor
 
-from bot import user_data, config_dict, bot_loop
-from ..telegram_helper.button_build import ButtonMaker
-from .telegraph_helper import telegraph
+from httpx import AsyncClient
+
+from bot import bot_loop, user_data, config_dict
+from bot.helper.telegram_helper.button_build import ButtonMaker
+
 from .help_messages import (
     YT_HELP_DICT,
-    MIRROR_HELP_DICT,
     CLONE_HELP_DICT,
+    MIRROR_HELP_DICT,
 )
+from .telegraph_helper import telegraph
 
 COMMAND_USAGE = {}
 
@@ -104,7 +106,7 @@ def arg_parser(items, arg_base):
         "-sync",
         "-ml",
         "-doc",
-        "-med"
+        "-med",
     }
     t = len(items)
     i = 0
@@ -115,11 +117,17 @@ def arg_parser(items, arg_base):
         if part in arg_base:
             if arg_start == -1:
                 arg_start = i
-            if (
-                i + 1 == t
-                and part in bool_arg_set
-                or part in ["-s", "-j", "-f", "-fd", "-fu", "-sync", "-ml", "-doc", "-med"]
-            ):
+            if (i + 1 == t and part in bool_arg_set) or part in [
+                "-s",
+                "-j",
+                "-f",
+                "-fd",
+                "-fu",
+                "-sync",
+                "-ml",
+                "-doc",
+                "-med",
+            ]:
                 arg_base[part] = True
             else:
                 sub_list = []
@@ -191,8 +199,7 @@ async def cmd_exec(cmd, shell=False):
 def new_task(func):
     @wraps(func)
     async def wrapper(*args, **kwargs):
-        task = bot_loop.create_task(func(*args, **kwargs))
-        return task
+        return bot_loop.create_task(func(*args, **kwargs))
 
     return wrapper
 

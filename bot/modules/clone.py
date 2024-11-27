@@ -1,40 +1,43 @@
-from asyncio import gather
 from json import loads
+from asyncio import gather
+from secrets import token_urlsafe
+
+from aiofiles.os import remove
 from pyrogram.filters import command
 from pyrogram.handlers import MessageHandler
-from secrets import token_urlsafe
-from aiofiles.os import remove
 
-from bot import LOGGER, task_dict, task_dict_lock, bot, bot_loop
-from ..helper.ext_utils.bot_utils import (
-    sync_to_async,
+from bot import LOGGER, bot, bot_loop, task_dict, task_dict_lock
+from bot.helper.ext_utils.bot_utils import (
+    COMMAND_USAGE,
     cmd_exec,
     arg_parser,
-    COMMAND_USAGE,
+    sync_to_async,
 )
-from ..helper.ext_utils.exceptions import DirectDownloadLinkException
-from ..helper.ext_utils.links_utils import (
-    is_gdrive_link,
-    is_share_link,
-    is_rclone_path,
+from bot.helper.ext_utils.exceptions import DirectDownloadLinkException
+from bot.helper.ext_utils.links_utils import (
     is_gdrive_id,
+    is_share_link,
+    is_gdrive_link,
+    is_rclone_path,
 )
-from ..helper.ext_utils.task_manager import stop_duplicate_check
-from ..helper.listeners.task_listener import TaskListener
-from ..helper.mirror_leech_utils.download_utils.direct_link_generator import (
-    direct_link_generator,
-)
-from ..helper.mirror_leech_utils.gdrive_utils.clone import GoogleDriveClone
-from ..helper.mirror_leech_utils.gdrive_utils.count import GoogleDriveCount
-from ..helper.mirror_leech_utils.rclone_utils.transfer import RcloneTransferHelper
-from ..helper.mirror_leech_utils.status_utils.gdrive_status import GoogleDriveStatus
-from ..helper.mirror_leech_utils.status_utils.rclone_status import RcloneStatus
-from ..helper.telegram_helper.bot_commands import BotCommands
-from ..helper.telegram_helper.filters import CustomFilters
-from ..helper.telegram_helper.message_utils import (
+from bot.helper.ext_utils.task_manager import stop_duplicate_check
+from bot.helper.listeners.task_listener import TaskListener
+from bot.helper.telegram_helper.filters import CustomFilters
+from bot.helper.telegram_helper.bot_commands import BotCommands
+from bot.helper.telegram_helper.message_utils import (
     send_message,
     delete_message,
     send_status_message,
+)
+from bot.helper.mirror_leech_utils.gdrive_utils.clone import GoogleDriveClone
+from bot.helper.mirror_leech_utils.gdrive_utils.count import GoogleDriveCount
+from bot.helper.mirror_leech_utils.rclone_utils.transfer import RcloneTransferHelper
+from bot.helper.mirror_leech_utils.status_utils.gdrive_status import (
+    GoogleDriveStatus,
+)
+from bot.helper.mirror_leech_utils.status_utils.rclone_status import RcloneStatus
+from bot.helper.mirror_leech_utils.download_utils.direct_link_generator import (
+    direct_link_generator,
 )
 
 
@@ -160,7 +163,9 @@ class Clone(TaskListener):
                     task_dict[self.mid] = GoogleDriveStatus(self, drive, gid, "cl")
                 if self.multi <= 1:
                     await send_status_message(self.message)
-            flink, mime_type, files, folders, dir_id = await sync_to_async(drive.clone)
+            flink, mime_type, files, folders, dir_id = await sync_to_async(
+                drive.clone
+            )
             if msg:
                 await delete_message(msg)
             if not flink:
@@ -205,7 +210,9 @@ class Clone(TaskListener):
                 rstat = loads(res[0])
                 if rstat["IsDir"]:
                     if not self.name:
-                        self.name = src_path.rsplit("/", 1)[-1] if src_path else remote
+                        self.name = (
+                            src_path.rsplit("/", 1)[-1] if src_path else remote
+                        )
                     self.up_dest += (
                         self.name if self.up_dest.endswith(":") else f"/{self.name}"
                     )

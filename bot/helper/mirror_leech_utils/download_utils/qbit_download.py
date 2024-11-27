@@ -1,22 +1,24 @@
-from aiofiles.os import remove, path as aiopath
 from asyncio import sleep
 
+from aiofiles.os import path as aiopath
+from aiofiles.os import remove
+
 from bot import (
+    LOGGER,
     task_dict,
+    config_dict,
     task_dict_lock,
     qbittorrent_client,
-    LOGGER,
-    config_dict,
 )
-from ...ext_utils.bot_utils import bt_selection_buttons, sync_to_async
-from ...ext_utils.task_manager import check_running_tasks
-from ...listeners.qbit_listener import on_download_start
-from ...mirror_leech_utils.status_utils.qbit_status import QbittorrentStatus
-from ...telegram_helper.message_utils import (
+from bot.helper.ext_utils.bot_utils import sync_to_async, bt_selection_buttons
+from bot.helper.ext_utils.task_manager import check_running_tasks
+from bot.helper.listeners.qbit_listener import on_download_start
+from bot.helper.telegram_helper.message_utils import (
     send_message,
     delete_message,
     send_status_message,
 )
+from bot.helper.mirror_leech_utils.status_utils.qbit_status import QbittorrentStatus
 
 """
 Only v1 torrents
@@ -79,11 +81,15 @@ async def add_qb_torrent(listener, path, ratio, seed_time):
             return
 
         async with task_dict_lock:
-            task_dict[listener.mid] = QbittorrentStatus(listener, queued=add_to_queue)
+            task_dict[listener.mid] = QbittorrentStatus(
+                listener, queued=add_to_queue
+            )
         await on_download_start(f"{listener.mid}")
 
         if add_to_queue:
-            LOGGER.info(f"Added to Queue/Download: {tor_info.name} - Hash: {ext_hash}")
+            LOGGER.info(
+                f"Added to Queue/Download: {tor_info.name} - Hash: {ext_hash}"
+            )
         else:
             LOGGER.info(f"QbitDownload started: {tor_info.name} - Hash: {ext_hash}")
 

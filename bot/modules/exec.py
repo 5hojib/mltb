@@ -1,17 +1,19 @@
-from aiofiles import open as aiopen
-from contextlib import redirect_stdout
-from io import StringIO, BytesIO
-from os import path as ospath, getcwd, chdir
-from pyrogram.filters import command
-from pyrogram.handlers import MessageHandler
+from io import BytesIO, StringIO
+from os import path as ospath
+from os import chdir, getcwd
 from textwrap import indent
 from traceback import format_exc
+from contextlib import suppress, redirect_stdout
+
+from aiofiles import open as aiopen
+from pyrogram.filters import command
+from pyrogram.handlers import MessageHandler
 
 from bot import LOGGER, bot
-from ..helper.ext_utils.bot_utils import sync_to_async, new_task
-from ..helper.telegram_helper.bot_commands import BotCommands
-from ..helper.telegram_helper.filters import CustomFilters
-from ..helper.telegram_helper.message_utils import send_file, send_message
+from bot.helper.ext_utils.bot_utils import new_task, sync_to_async
+from bot.helper.telegram_helper.filters import CustomFilters
+from bot.helper.telegram_helper.bot_commands import BotCommands
+from bot.helper.telegram_helper.message_utils import send_file, send_message
 
 namespaces = {}
 
@@ -98,10 +100,8 @@ async def do(func, message):
             if value:
                 result = f"{value}"
             else:
-                try:
-                    result = f"{repr(await sync_to_async(eval, body, env))}"
-                except:
-                    pass
+                with suppress(Exception):
+                    result = f"{await sync_to_async(eval, body, env)!r}"
         else:
             result = f"{value}{func_return}"
         if result:

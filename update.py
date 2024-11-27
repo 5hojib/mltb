@@ -1,19 +1,24 @@
+from os import path, remove, environ
 from sys import exit
-from dotenv import load_dotenv, dotenv_values
 from logging import (
+    INFO,
+    ERROR,
     FileHandler,
     StreamHandler,
-    INFO,
-    basicConfig,
-    error as log_error,
-    info as log_info,
     getLogger,
-    ERROR,
+    basicConfig,
 )
-from os import path, environ, remove
-from pymongo.mongo_client import MongoClient
-from pymongo.server_api import ServerApi
+from logging import (
+    info as log_info,
+)
+from logging import (
+    error as log_error,
+)
 from subprocess import run as srun
+
+from dotenv import load_dotenv, dotenv_values
+from pymongo.server_api import ServerApi
+from pymongo.mongo_client import MongoClient
 
 getLogger("pymongo").setLevel(ERROR)
 
@@ -59,8 +64,10 @@ if DATABASE_URL is not None:
         if old_config is not None:
             del old_config["_id"]
         if (
-            old_config is not None
-            and old_config == dict(dotenv_values("config.env"))
+            (
+                old_config is not None
+                and old_config == dict(dotenv_values("config.env"))
+            )
             or old_config is None
         ) and config_dict is not None:
             environ["UPSTREAM_REPO"] = config_dict["UPSTREAM_REPO"]
@@ -79,7 +86,7 @@ if len(UPSTREAM_BRANCH) == 0:
 
 if UPSTREAM_REPO is not None:
     if path.exists(".git"):
-        srun(["rm", "-rf", ".git"])
+        srun(["rm", "-rf", ".git"], check=False)
 
     update = srun(
         [
@@ -93,6 +100,7 @@ if UPSTREAM_REPO is not None:
                      && git reset --hard origin/{UPSTREAM_BRANCH} -q"
         ],
         shell=True,
+        check=False,
     )
 
     if update.returncode == 0:

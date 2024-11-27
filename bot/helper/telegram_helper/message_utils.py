@@ -1,12 +1,21 @@
-from asyncio import sleep
-from pyrogram.errors import FloodWait, FloodPremiumWait
 from re import match as re_match
 from time import time
+from asyncio import sleep
 
-from bot import config_dict, LOGGER, status_dict, task_dict_lock, intervals, bot, user
-from ..ext_utils.bot_utils import SetInterval
-from ..ext_utils.exceptions import TgLinkException
-from ..ext_utils.status_utils import get_readable_message
+from pyrogram.errors import FloodWait, FloodPremiumWait
+
+from bot import (
+    LOGGER,
+    bot,
+    user,
+    intervals,
+    config_dict,
+    status_dict,
+    task_dict_lock,
+)
+from bot.helper.ext_utils.bot_utils import SetInterval
+from bot.helper.ext_utils.exceptions import TgLinkException
+from bot.helper.ext_utils.status_utils import get_readable_message
 
 
 async def send_message(message, text, buttons=None, block=True):
@@ -119,7 +128,9 @@ async def get_tg_link_message(link):
             r"tg:\/\/openmessage\?user_id=([0-9]+)&message_id=([0-9-]+)", link
         )
         if not user:
-            raise TgLinkException("USER_SESSION_STRING required for this private link!")
+            raise TgLinkException(
+                "USER_SESSION_STRING required for this private link!"
+            )
 
     chat = msg[1]
     msg_id = msg[2]
@@ -158,7 +169,7 @@ async def get_tg_link_message(link):
 
     if not private:
         return (links, "bot") if links else (message, "bot")
-    elif user:
+    if user:
         try:
             user_message = await user.get_messages(chat_id=chat, message_ids=msg_id)
         except Exception as e:
@@ -167,8 +178,8 @@ async def get_tg_link_message(link):
             ) from e
         if not user_message.empty:
             return (links, "user") if links else (user_message, "user")
-    else:
-        raise TgLinkException("Private: Please report!")
+        return None
+    raise TgLinkException("Private: Please report!")
 
 
 async def update_status_message(sid, force=False):

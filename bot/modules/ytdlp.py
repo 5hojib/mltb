@@ -1,29 +1,35 @@
-from httpx import AsyncClient
-from asyncio import wait_for, Event
-from functools import partial
-from pyrogram.filters import command, regex, user
-from pyrogram.handlers import MessageHandler, CallbackQueryHandler
 from time import time
-from yt_dlp import YoutubeDL
+from asyncio import Event, wait_for
+from functools import partial
 
-from bot import DOWNLOAD_DIR, bot, config_dict, LOGGER, bot_loop, task_dict_lock
-from ..helper.ext_utils.bot_utils import (
-    new_task,
-    sync_to_async,
-    arg_parser,
+from httpx import AsyncClient
+from yt_dlp import YoutubeDL
+from pyrogram.filters import user, regex, command
+from pyrogram.handlers import MessageHandler, CallbackQueryHandler
+
+from bot import LOGGER, DOWNLOAD_DIR, bot, bot_loop, config_dict, task_dict_lock
+from bot.helper.ext_utils.bot_utils import (
     COMMAND_USAGE,
+    new_task,
+    arg_parser,
+    sync_to_async,
 )
-from ..helper.ext_utils.links_utils import is_url
-from ..helper.ext_utils.status_utils import get_readable_file_size, get_readable_time
-from ..helper.listeners.task_listener import TaskListener
-from ..helper.mirror_leech_utils.download_utils.yt_dlp_download import YoutubeDLHelper
-from ..helper.telegram_helper.bot_commands import BotCommands
-from ..helper.telegram_helper.button_build import ButtonMaker
-from ..helper.telegram_helper.filters import CustomFilters
-from ..helper.telegram_helper.message_utils import (
-    send_message,
+from bot.helper.ext_utils.links_utils import is_url
+from bot.helper.ext_utils.status_utils import (
+    get_readable_time,
+    get_readable_file_size,
+)
+from bot.helper.listeners.task_listener import TaskListener
+from bot.helper.telegram_helper.filters import CustomFilters
+from bot.helper.telegram_helper.bot_commands import BotCommands
+from bot.helper.telegram_helper.button_build import ButtonMaker
+from bot.helper.telegram_helper.message_utils import (
     edit_message,
+    send_message,
     delete_message,
+)
+from bot.helper.mirror_leech_utils.download_utils.yt_dlp_download import (
+    YoutubeDLHelper,
 )
 
 
@@ -98,7 +104,9 @@ class YtSelection:
         if "entries" in result:
             self._is_playlist = True
             for i in ["144", "240", "360", "480", "720", "1080", "1440", "2160"]:
-                video_format = f"bv*[height<=?{i}][ext=mp4]+ba[ext=m4a]/b[height<=?{i}]"
+                video_format = (
+                    f"bv*[height<=?{i}][ext=mp4]+ba[ext=m4a]/b[height<=?{i}]"
+                )
                 b_data = f"{i}|mp4"
                 self.formats[b_data] = video_format
                 buttons.data_button(f"{i}-mp4", f"ytq {b_data}")
@@ -133,7 +141,9 @@ class YtSelection:
                         ):
                             if item.get("audio_ext") == "m4a":
                                 self._is_m4a = True
-                            b_name = f"{item.get('acodec') or format_id}-{item['ext']}"
+                            b_name = (
+                                f"{item.get('acodec') or format_id}-{item['ext']}"
+                            )
                             v_format = format_id
                         elif item.get("height"):
                             height = item["height"]
@@ -155,7 +165,9 @@ class YtSelection:
                 for b_name, tbr_dict in self.formats.items():
                     if len(tbr_dict) == 1:
                         tbr, v_list = next(iter(tbr_dict.items()))
-                        buttonName = f"{b_name} ({get_readable_file_size(v_list[0])})"
+                        buttonName = (
+                            f"{b_name} ({get_readable_file_size(v_list[0])})"
+                        )
                         buttons.data_button(buttonName, f"ytq sub {b_name} {tbr}")
                     else:
                         buttons.data_button(b_name, f"ytq dict {b_name}")
@@ -428,8 +440,7 @@ class YtDlp(TaskListener):
                     if value.startswith("ba/b-"):
                         qual = value
                         continue
-                    else:
-                        qual = value
+                    qual = value
                 if value.startswith("^"):
                     if "." in value or value == "^inf":
                         value = float(value.split("^")[1])

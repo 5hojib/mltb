@@ -1,13 +1,19 @@
-from PIL import Image
-from aiofiles.os import remove, path as aiopath, makedirs
-from asyncio import create_subprocess_exec, gather, wait_for
-from asyncio.subprocess import PIPE
-from os import path as ospath, cpu_count
-from re import search as re_search, escape
+import contextlib
+from os import path as ospath
+from os import cpu_count
+from re import escape
+from re import search as re_search
 from time import time
-from aioshutil import rmtree
+from asyncio import gather, wait_for, create_subprocess_exec
+from asyncio.subprocess import PIPE
 
-from bot import LOGGER, subprocess_lock, DOWNLOAD_DIR
+from PIL import Image
+from aioshutil import rmtree
+from aiofiles.os import path as aiopath
+from aiofiles.os import remove, makedirs
+
+from bot import LOGGER, DOWNLOAD_DIR, subprocess_lock
+
 from .bot_utils import cmd_exec, sync_to_async
 from .files_utils import ARCH_EXT, get_mime_type
 
@@ -46,22 +52,20 @@ async def convert_video(listener, video_file, ext, retry=False):
     code = listener.suproc.returncode
     if code == 0:
         return output
-    elif code == -9:
+    if code == -9:
         listener.is_cancelled = True
         return False
-    else:
-        if not retry:
-            if await aiopath.exists(output):
-                await remove(output)
-            return await convert_video(listener, video_file, ext, True)
-        else:
-            try:
-                stderr = stderr.decode().strip()
-            except:
-                stderr = "Unable to decode the error!"
-            LOGGER.error(
-                f"{stderr}. Something went wrong while converting video, mostly file need specific codec. Path: {video_file}"
-            )
+    if not retry:
+        if await aiopath.exists(output):
+            await remove(output)
+        return await convert_video(listener, video_file, ext, True)
+    try:
+        stderr = stderr.decode().strip()
+    except:
+        stderr = "Unable to decode the error!"
+    LOGGER.error(
+        f"{stderr}. Something went wrong while converting video, mostly file need specific codec. Path: {video_file}"
+    )
     return False
 
 
@@ -86,19 +90,18 @@ async def convert_audio(listener, audio_file, ext):
     code = listener.suproc.returncode
     if code == 0:
         return output
-    elif code == -9:
+    if code == -9:
         listener.is_cancelled = True
         return False
-    else:
-        try:
-            stderr = stderr.decode().strip()
-        except:
-            stderr = "Unable to decode the error!"
-        LOGGER.error(
-            f"{stderr}. Something went wrong while converting audio, mostly file need specific codec. Path: {audio_file}"
-        )
-        if await aiopath.exists(output):
-            await remove(output)
+    try:
+        stderr = stderr.decode().strip()
+    except:
+        stderr = "Unable to decode the error!"
+    LOGGER.error(
+        f"{stderr}. Something went wrong while converting audio, mostly file need specific codec. Path: {audio_file}"
+    )
+    if await aiopath.exists(output):
+        await remove(output)
     return False
 
 
@@ -131,7 +134,9 @@ async def is_multi_streams(path):
             ]
         )
     except Exception as e:
-        LOGGER.error(f"Get Video Streams: {e}. Mostly File not found! - File: {path}")
+        LOGGER.error(
+            f"Get Video Streams: {e}. Mostly File not found! - File: {path}"
+        )
         return False
     if result[0] and result[2] == 0:
         fields = eval(result[0]).get("streams")
@@ -204,10 +209,14 @@ async def get_document_type(path):
         if result[1] and mime_type.startswith("video"):
             is_video = True
     except Exception as e:
-        LOGGER.error(f"Get Document Type: {e}. Mostly File not found! - File: {path}")
+        LOGGER.error(
+            f"Get Document Type: {e}. Mostly File not found! - File: {path}"
+        )
         if mime_type.startswith("audio"):
             return False, True, False
-        if not mime_type.startswith("video") and not mime_type.endswith("octet-stream"):
+        if not mime_type.startswith("video") and not mime_type.endswith(
+            "octet-stream"
+        ):
             return is_video, is_audio, is_image
         if mime_type.startswith("video"):
             is_video = True
@@ -272,9 +281,8 @@ async def take_ss(video_file, ss_nb) -> bool:
             await rmtree(dirpath, ignore_errors=True)
             return False
         return dirpath
-    else:
-        LOGGER.error("take_ss: Can't get the duration of video")
-        return False
+    LOGGER.error("take_ss: Can't get the duration of video")
+    return False
 
 
 async def get_audio_thumbnail(audio_file):
@@ -458,15 +466,13 @@ async def split_file(
             if code == -9:
                 listener.is_cancelled = True
                 return False
-            elif code != 0:
+            if code != 0:
                 try:
                     stderr = stderr.decode().strip()
                 except:
                     stderr = "Unable to decode the error!"
-                try:
+                with contextlib.suppress(Exception):
                     await remove(out_path)
-                except:
-                    pass
                 if multi_streams:
                     LOGGER.warning(
                         f"{stderr}. Retrying without map, -map 0 not working in all situations. Path: {path}"
@@ -483,10 +489,9 @@ async def split_file(
                         True,
                         False,
                     )
-                else:
-                    LOGGER.warning(
-                        f"{stderr}. Unable to split this video, if it's size less than {listener.max_split_size} will be uploaded as it is. Path: {path}"
-                    )
+                LOGGER.warning(
+                    f"{stderr}. Unable to split this video, if it's size less than {listener.max_split_size} will be uploaded as it is. Path: {path}"
+                )
                 return False
             out_size = await aiopath.getsize(out_path)
             if out_size > listener.max_split_size:
@@ -511,12 +516,12 @@ async def split_file(
                     f"Something went wrong while splitting, mostly file is corrupted. Path: {path}"
                 )
                 break
-            elif duration == lpd:
+            if duration == lpd:
                 LOGGER.warning(
                     f"This file has been splitted with default stream and audio, so you will only see one part with less size from orginal one because it doesn't have all streams and audios. This happens mostly with MKV videos. Path: {path}"
                 )
                 break
-            elif lpd <= 3:
+            if lpd <= 3:
                 await remove(out_path)
                 break
             start_time += lpd - 3
@@ -542,7 +547,7 @@ async def split_file(
         if code == -9:
             listener.is_cancelled = True
             return False
-        elif code != 0:
+        if code != 0:
             try:
                 stderr = stderr.decode().strip()
             except:
@@ -609,19 +614,18 @@ async def create_sample_video(listener, video_file, sample_duration, part_durati
     if code == -9:
         listener.is_cancelled = True
         return False
-    elif code == 0:
+    if code == 0:
         return output_file
-    else:
-        try:
-            stderr = stderr.decode().strip()
-        except Exception:
-            stderr = "Unable to decode the error!"
-        LOGGER.error(
-            f"{stderr}. Something went wrong while creating sample video, mostly file is corrupted. Path: {video_file}"
-        )
-        if await aiopath.exists(output_file):
-            await remove(output_file)
-        return False
+    try:
+        stderr = stderr.decode().strip()
+    except Exception:
+        stderr = "Unable to decode the error!"
+    LOGGER.error(
+        f"{stderr}. Something went wrong while creating sample video, mostly file is corrupted. Path: {video_file}"
+    )
+    if await aiopath.exists(output_file):
+        await remove(output_file)
+    return False
 
     """finished_segments = []
     await makedirs(f"{dir}/mltb_segments/", exist_ok=True)
@@ -709,3 +713,4 @@ async def create_sample_video(listener, video_file, sample_duration, part_durati
         return False
     await gather(remove(segments_file), rmtree(f"{dir}/mltb_segments"))
     return output_file"""
+    return None

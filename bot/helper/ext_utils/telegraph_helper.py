@@ -1,5 +1,6 @@
 from asyncio import sleep
 from secrets import token_urlsafe
+
 from telegraph.aio import Telegraph
 from telegraph.exceptions import RetryAfterError
 
@@ -76,11 +77,11 @@ class TelegraphHelper:
                 title="Mirror-leech-bot Torrent Search",
                 content=content,
             )
-        return
 
 
 telegraph = TelegraphHelper(
-    "Mirror-Leech-Telegram-Bot", "https://github.com/anasty17/mirror-leech-telegram-bot"
+    "Mirror-Leech-Telegram-Bot",
+    "https://github.com/anasty17/mirror-leech-telegram-bot",
 )
 
 print(__name__)

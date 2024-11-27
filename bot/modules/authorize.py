@@ -1,12 +1,12 @@
 from pyrogram.filters import command
 from pyrogram.handlers import MessageHandler
 
-from bot import user_data, config_dict, bot
-from ..helper.ext_utils.bot_utils import update_user_ldata, new_task
-from ..helper.ext_utils.db_handler import database
-from ..helper.telegram_helper.bot_commands import BotCommands
-from ..helper.telegram_helper.filters import CustomFilters
-from ..helper.telegram_helper.message_utils import send_message
+from bot import bot, user_data, config_dict
+from bot.helper.ext_utils.bot_utils import new_task, update_user_ldata
+from bot.helper.ext_utils.db_handler import database
+from bot.helper.telegram_helper.filters import CustomFilters
+from bot.helper.telegram_helper.bot_commands import BotCommands
+from bot.helper.telegram_helper.message_utils import send_message
 
 
 @new_task
@@ -30,8 +30,7 @@ async def authorize(_, message):
         if (
             thread_id is not None
             and thread_id in user_data[chat_id].get("thread_ids", [])
-            or thread_id is None
-        ):
+        ) or thread_id is None:
             msg = "Already Authorized!"
         else:
             if "thread_ids" in user_data[chat_id]:
@@ -88,7 +87,9 @@ async def addSudo(_, message):
     if len(msg) > 1:
         id_ = int(msg[1].strip())
     elif reply_to := message.reply_to_message:
-        id_ = reply_to.from_user.id if reply_to.from_user else reply_to.sender_chat.id
+        id_ = (
+            reply_to.from_user.id if reply_to.from_user else reply_to.sender_chat.id
+        )
     if id_:
         if id_ in user_data and user_data[id_].get("is_sudo"):
             msg = "Already Sudo!"
@@ -109,8 +110,10 @@ async def removeSudo(_, message):
     if len(msg) > 1:
         id_ = int(msg[1].strip())
     elif reply_to := message.reply_to_message:
-        id_ = reply_to.from_user.id if reply_to.from_user else reply_to.sender_chat.id
-    if id_ and id_ not in user_data or user_data[id_].get("is_sudo"):
+        id_ = (
+            reply_to.from_user.id if reply_to.from_user else reply_to.sender_chat.id
+        )
+    if (id_ and id_ not in user_data) or user_data[id_].get("is_sudo"):
         update_user_ldata(id_, "is_sudo", False)
         if config_dict["DATABASE_URL"]:
             await database.update_user_data(id_)
