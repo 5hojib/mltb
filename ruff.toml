@@ -1,0 +1,8 @@
+fix = true
+unsafe-fixes = true
+target-version = "py312"
+
+[lint]
+select = [
+    "N",    # Naming
+]
