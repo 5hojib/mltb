@@ -106,7 +106,9 @@ class JDownloaderStatus:
     async def cancel_task(self):
         self.listener.is_cancelled = True
         LOGGER.info(f"Cancelling Download: {self.name()}")
-        await jdownloader.device.downloads.remove_links(package_ids=jd_downloads[self._gid]["ids"])
+        await jdownloader.device.downloads.remove_links(
+            package_ids=jd_downloads[self._gid]["ids"]
+        )
         async with jd_lock:
             del jd_downloads[self._gid]
         await self.listener.on_download_error("Download cancelled by user!")

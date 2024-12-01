@@ -163,21 +163,21 @@ def create_list(par, msg):
         msg[0] += "<li>"
         if i.is_folder:
             if i.name != ".unwanted":
-                msg[
-                    0
-                ] += f'<input type="checkbox" name="foldernode_{msg[1]}"> <label for="{i.name}">{i.name}</label>'
+                msg[0] += (
+                    f'<input type="checkbox" name="foldernode_{msg[1]}"> <label for="{i.name}">{i.name}</label>'
+                )
             create_list(i, msg)
             msg[0] += "</li>"
             msg[1] += 1
         else:
             if i.priority == 0:
-                msg[
-                    0
-                ] += f'<input type="checkbox" name="filenode_{i.file_id}" data-size="{i.fsize}"> <label data-size="{i.fsize}" for="filenode_{i.file_id}">{i.name}</label> / {i.progress}%'
+                msg[0] += (
+                    f'<input type="checkbox" name="filenode_{i.file_id}" data-size="{i.fsize}"> <label data-size="{i.fsize}" for="filenode_{i.file_id}">{i.name}</label> / {i.progress}%'
+                )
             else:
-                msg[
-                    0
-                ] += f'<input type="checkbox" checked name="filenode_{i.file_id}" data-size="{i.fsize}"> <label data-size="{i.fsize}" for="filenode_{i.file_id}">{i.name}</label> / {i.progress}%'
+                msg[0] += (
+                    f'<input type="checkbox" checked name="filenode_{i.file_id}" data-size="{i.fsize}"> <label data-size="{i.fsize}" for="filenode_{i.file_id}">{i.name}</label> / {i.progress}%'
+                )
             msg[0] += f'<input type="hidden" value="off" name="filenode_{i.file_id}">'
             msg[0] += "</li>"
 

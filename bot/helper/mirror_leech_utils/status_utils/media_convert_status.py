@@ -27,6 +27,9 @@ class MediaConvertStatus:
         LOGGER.info(f"Cancelling Converting: {self.listener.name}")
         self.listener.is_cancelled = True
         async with subprocess_lock:
-            if self.listener.suproc is not None and self.listener.suproc.returncode is None:
+            if (
+                self.listener.suproc is not None
+                and self.listener.suproc.returncode is None
+            ):
                 self.listener.suproc.kill()
         await self.listener.on_upload_error("Converting stopped by user!")

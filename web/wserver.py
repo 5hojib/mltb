@@ -757,7 +757,6 @@ def set_priority(id_):
     data = dict(request.form)
 
     if id_.startswith("SABnzbd_nzo"):
-
         to_remove = []
         for i, value in data.items():
             if "filenode" in i and value != "on":

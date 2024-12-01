@@ -8,7 +8,6 @@ LOGGER = getLogger(__name__)
 
 
 class GoogleDriveSearch(GoogleDriveHelper):
-
     def __init__(self, stop_dup=False, no_multi=False, is_recursive=True, item_type=""):
         super().__init__()
         self._stop_dup = stop_dup

@@ -1,5 +1,4 @@
 class SubFunctions:
-
     def __init__(self):
         pass
 

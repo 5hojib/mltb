@@ -53,7 +53,10 @@ async def add_rclone_download(listener, path):
         res = await cmd_exec(cmd2)
         if res[2] != 0:
             if res[2] != -9:
-                err = (res[1]or "Use <code>/shell cat rlog.txt</code> to see more information")
+                err = (
+                    res[1]
+                    or "Use <code>/shell cat rlog.txt</code> to see more information"
+                )
                 msg = f"Error: While getting rclone stat/size. Path: {remote}:{listener.link}. Stderr: {err[:4000]}"
                 await listener.on_download_error(msg)
             return
@@ -86,7 +89,7 @@ async def add_rclone_download(listener, path):
             if not str(err):
                 err = "Use <code>/shell cat rlog.txt</code> to see more information"
             await listener.on_download_error(f"RcloneDownload JsonLoad: {err}")
-            return    
+            return
         if rstat["IsDir"]:
             if not listener.name:
                 listener.name = (
