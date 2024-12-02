@@ -1,4 +1,4 @@
-from ...ext_utils.status_utils import MirrorStatus
+from bot.helper.ext_utils.status_utils import MirrorStatus
 
 
 class RcloneStatus:
@@ -29,10 +29,9 @@ class RcloneStatus:
     def status(self):
         if self._status == "dl":
             return MirrorStatus.STATUS_DOWNLOADING
-        elif self._status == "up":
+        if self._status == "up":
             return MirrorStatus.STATUS_UPLOADING
-        else:
-            return MirrorStatus.STATUS_CLONING
+        return MirrorStatus.STATUS_CLONING
 
     def processed_bytes(self):
         return self._obj.transferred_size

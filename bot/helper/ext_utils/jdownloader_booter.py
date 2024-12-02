@@ -1,12 +1,14 @@
-from aiofiles.os import path, makedirs, listdir, rename
-from aioshutil import rmtree
+from re import match
 from json import dump
 from random import randint
-from re import match
 
-from bot import config_dict, LOGGER, bot_name
-from .bot_utils import cmd_exec, new_task
+from aioshutil import rmtree
+from aiofiles.os import path, rename, listdir, makedirs
+
+from bot import LOGGER, bot_name, config_dict
 from myjd import MyJdApi
+
+from .bot_utils import cmd_exec, new_task
 
 
 class JDownloader(MyJdApi):

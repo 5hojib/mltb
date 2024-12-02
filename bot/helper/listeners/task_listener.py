@@ -1,50 +1,54 @@
-from aiofiles.os import path as aiopath, listdir, makedirs, remove
-from aioshutil import move
-from asyncio import sleep, gather
 from html import escape
+from asyncio import sleep, gather
+
 from requests import utils as rutils
+from aioshutil import move
+from aiofiles.os import path as aiopath
+from aiofiles.os import remove, listdir, makedirs
 
 from bot import (
-    intervals,
-    aria2,
-    DOWNLOAD_DIR,
-    task_dict,
-    task_dict_lock,
     LOGGER,
     DATABASE_URL,
-    config_dict,
-    non_queued_up,
-    non_queued_dl,
-    queued_up,
+    DOWNLOAD_DIR,
+    aria2,
+    intervals,
     queued_dl,
+    queued_up,
+    task_dict,
+    config_dict,
+    non_queued_dl,
+    non_queued_up,
+    task_dict_lock,
     queue_dict_lock,
     same_directory_lock,
 )
-from ..common import TaskConfig
-from ..ext_utils.bot_utils import sync_to_async
-from ..ext_utils.db_handler import database
-from ..ext_utils.files_utils import (
+from bot.helper.common import TaskConfig
+from bot.helper.ext_utils.bot_utils import sync_to_async
+from bot.helper.ext_utils.db_handler import database
+from bot.helper.ext_utils.files_utils import (
+    join_files,
+    clean_target,
     get_path_size,
     clean_download,
-    clean_target,
-    join_files,
 )
-from ..ext_utils.links_utils import is_gdrive_id
-from ..ext_utils.status_utils import get_readable_file_size
-from ..ext_utils.task_manager import start_from_queued, check_running_tasks
-from ..mirror_leech_utils.gdrive_utils.upload import GoogleDriveUpload
-from ..mirror_leech_utils.rclone_utils.transfer import RcloneTransferHelper
-from ..mirror_leech_utils.status_utils.gdrive_status import GoogleDriveStatus
-from ..mirror_leech_utils.status_utils.queue_status import QueueStatus
-from ..mirror_leech_utils.status_utils.rclone_status import RcloneStatus
-from ..mirror_leech_utils.status_utils.telegram_status import TelegramStatus
-from ..mirror_leech_utils.telegram_uploader import TelegramUploader
-from ..telegram_helper.button_build import ButtonMaker
-from ..telegram_helper.message_utils import (
+from bot.helper.ext_utils.links_utils import is_gdrive_id
+from bot.helper.ext_utils.status_utils import get_readable_file_size
+from bot.helper.ext_utils.task_manager import start_from_queued, check_running_tasks
+from bot.helper.telegram_helper.button_build import ButtonMaker
+from bot.helper.telegram_helper.message_utils import (
     send_message,
     delete_status,
     update_status_message,
 )
+from bot.helper.mirror_leech_utils.telegram_uploader import TelegramUploader
+from bot.helper.mirror_leech_utils.gdrive_utils.upload import GoogleDriveUpload
+from bot.helper.mirror_leech_utils.rclone_utils.transfer import RcloneTransferHelper
+from bot.helper.mirror_leech_utils.status_utils.queue_status import QueueStatus
+from bot.helper.mirror_leech_utils.status_utils.gdrive_status import (
+    GoogleDriveStatus,
+)
+from bot.helper.mirror_leech_utils.status_utils.rclone_status import RcloneStatus
+from bot.helper.mirror_leech_utils.status_utils.telegram_status import TelegramStatus
 
 
 class TaskListener(TaskConfig):
@@ -104,19 +108,26 @@ class TaskListener(TaskConfig):
                                 )
                                 self.same_dir[self.folder_name]["total"] -= 1
                                 spath = f"{self.dir}{self.folder_name}"
-                                des_id = list(self.same_dir[self.folder_name]["tasks"])[
-                                    0
-                                ]
-                                des_path = f"{DOWNLOAD_DIR}{des_id}{self.folder_name}"
+                                des_id = next(
+                                    iter(self.same_dir[self.folder_name]["tasks"])
+                                )
+                                des_path = (
+                                    f"{DOWNLOAD_DIR}{des_id}{self.folder_name}"
+                                )
                                 await makedirs(des_path, exist_ok=True)
-                                LOGGER.info(f"Moving files from {self.mid} to {des_id}")
+                                LOGGER.info(
+                                    f"Moving files from {self.mid} to {des_id}"
+                                )
                                 for item in await listdir(spath):
                                     if item.endswith((".aria2", ".!qB")):
                                         continue
-                                    item_path = f"{self.dir}{self.folder_name}/{item}"
+                                    item_path = (
+                                        f"{self.dir}{self.folder_name}/{item}"
+                                    )
                                     if item in await listdir(des_path):
                                         await move(
-                                            item_path, f"{des_path}/{self.mid}-{item}"
+                                            item_path,
+                                            f"{des_path}/{self.mid}-{item}",
                                         )
                                     else:
                                         await move(item_path, f"{des_path}/{item}")
@@ -228,7 +239,9 @@ class TaskListener(TaskConfig):
         self.size = await get_path_size(up_dir)
 
         if self.is_leech and not self.compress:
-            await self.proceed_split(up_dir, unwanted_files_size, unwanted_files, gid)
+            await self.proceed_split(
+                up_dir, unwanted_files_size, unwanted_files, gid
+            )
             if self.is_cancelled:
                 return
 
@@ -308,9 +321,8 @@ class TaskListener(TaskConfig):
             if mime_type == "Folder":
                 msg += f"\n<b>SubFolders: </b>{folders}"
                 msg += f"\n<b>Files: </b>{files}"
-            if (
-                link
-                or rclonePath
+            if link or (
+                rclonePath
                 and config_dict["RCLONE_SERVE_URL"]
                 and not self.private_link
             ):

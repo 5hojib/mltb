@@ -1,48 +1,52 @@
-from aiofiles.os import path as aiopath
+from re import match as re_match
 from base64 import b64encode
+
+from aiofiles.os import path as aiopath
 from pyrogram.filters import command
 from pyrogram.handlers import MessageHandler
-from re import match as re_match
 
-from bot import bot, DOWNLOAD_DIR, LOGGER, bot_loop, task_dict_lock
-from ..helper.ext_utils.bot_utils import (
-    get_content_type,
-    sync_to_async,
-    arg_parser,
+from bot import LOGGER, DOWNLOAD_DIR, bot, bot_loop, task_dict_lock
+from bot.helper.ext_utils.bot_utils import (
     COMMAND_USAGE,
+    arg_parser,
+    sync_to_async,
+    get_content_type,
 )
-from ..helper.ext_utils.exceptions import DirectDownloadLinkException
-from ..helper.ext_utils.links_utils import (
+from bot.helper.ext_utils.exceptions import DirectDownloadLinkException
+from bot.helper.ext_utils.links_utils import (
     is_url,
     is_magnet,
+    is_gdrive_id,
     is_gdrive_link,
     is_rclone_path,
     is_telegram_link,
-    is_gdrive_id,
 )
-from ..helper.listeners.task_listener import TaskListener
-from ..helper.mirror_leech_utils.download_utils.aria2_download import (
+from bot.helper.listeners.task_listener import TaskListener
+from bot.helper.telegram_helper.filters import CustomFilters
+from bot.helper.telegram_helper.bot_commands import BotCommands
+from bot.helper.telegram_helper.message_utils import (
+    send_message,
+    get_tg_link_message,
+)
+from bot.helper.mirror_leech_utils.download_utils.gd_download import add_gd_download
+from bot.helper.mirror_leech_utils.download_utils.jd_download import add_jd_download
+from bot.helper.mirror_leech_utils.download_utils.qbit_download import add_qb_torrent
+from bot.helper.mirror_leech_utils.download_utils.aria2_download import (
     add_aria2c_download,
 )
-from ..helper.mirror_leech_utils.download_utils.direct_downloader import (
-    add_direct_download,
-)
-from ..helper.mirror_leech_utils.download_utils.direct_link_generator import (
-    direct_link_generator,
-)
-from ..helper.mirror_leech_utils.download_utils.gd_download import add_gd_download
-from ..helper.mirror_leech_utils.download_utils.jd_download import add_jd_download
-from ..helper.mirror_leech_utils.download_utils.qbit_download import add_qb_torrent
-from ..helper.mirror_leech_utils.download_utils.nzb_downloader import add_nzb
-from ..helper.mirror_leech_utils.download_utils.rclone_download import (
+from bot.helper.mirror_leech_utils.download_utils.nzb_downloader import add_nzb
+from bot.helper.mirror_leech_utils.download_utils.rclone_download import (
     add_rclone_download,
 )
-from ..helper.mirror_leech_utils.download_utils.telegram_download import (
+from bot.helper.mirror_leech_utils.download_utils.direct_downloader import (
+    add_direct_download,
+)
+from bot.helper.mirror_leech_utils.download_utils.telegram_download import (
     TelegramDownloadHelper,
 )
-from ..helper.telegram_helper.bot_commands import BotCommands
-from ..helper.telegram_helper.filters import CustomFilters
-from ..helper.telegram_helper.message_utils import send_message, get_tg_link_message
+from bot.helper.mirror_leech_utils.download_utils.direct_link_generator import (
+    direct_link_generator,
+)
 
 
 class Mirror(TaskListener):
@@ -188,12 +192,20 @@ class Mirror(TaskListener):
                                 if fd_name != self.folder_name:
                                     self.same_dir[fd_name]["total"] -= 1
                         elif self.same_dir:
-                            self.same_dir[self.folder_name] = {"total": self.multi, "tasks": {self.mid}}
+                            self.same_dir[self.folder_name] = {
+                                "total": self.multi,
+                                "tasks": {self.mid},
+                            }
                             for fd_name in self.same_dir:
                                 if fd_name != self.folder_name:
                                     self.same_dir[fd_name]["total"] -= 1
                         else:
-                            self.same_dir = {self.folder_name: {"total": self.multi, "tasks": {self.mid}}}
+                            self.same_dir = {
+                                self.folder_name: {
+                                    "total": self.multi,
+                                    "tasks": {self.mid},
+                                }
+                            }
                 elif self.same_dir:
                     async with task_dict_lock:
                         for fd_name in self.same_dir:
@@ -275,17 +287,17 @@ class Mirror(TaskListener):
                 file_ = None
 
         if (
-            not self.link
-            and file_ is None
-            or is_telegram_link(self.link)
-            and reply_to is None
-            or file_ is None
-            and not is_url(self.link)
-            and not is_magnet(self.link)
-            and not await aiopath.exists(self.link)
-            and not is_rclone_path(self.link)
-            and not is_gdrive_id(self.link)
-            and not is_gdrive_link(self.link)
+            (not self.link and file_ is None)
+            or (is_telegram_link(self.link) and reply_to is None)
+            or (
+                file_ is None
+                and not is_url(self.link)
+                and not is_magnet(self.link)
+                and not await aiopath.exists(self.link)
+                and not is_rclone_path(self.link)
+                and not is_gdrive_id(self.link)
+                and not is_gdrive_link(self.link)
+            )
         ):
             await send_message(
                 self.message, COMMAND_USAGE["mirror"][0], COMMAND_USAGE["mirror"][1]
@@ -315,7 +327,9 @@ class Mirror(TaskListener):
             and not is_gdrive_id(self.link)
         ):
             content_type = await get_content_type(self.link)
-            if content_type is None or re_match(r"text/html|text/plain", content_type):
+            if content_type is None or re_match(
+                r"text/html|text/plain", content_type
+            ):
                 try:
                     self.link = await sync_to_async(direct_link_generator, self.link)
                     if isinstance(self.link, tuple):
@@ -352,9 +366,7 @@ class Mirror(TaskListener):
             pssw = args["-ap"]
             if ussr or pssw:
                 auth = f"{ussr}:{pssw}"
-                headers += (
-                    f" authorization: Basic {b64encode(auth.encode()).decode('ascii')}"
-                )
+                headers += f" authorization: Basic {b64encode(auth.encode()).decode('ascii')}"
             await add_aria2c_download(self, path, headers, ratio, seed_time)
 
 
@@ -385,7 +397,9 @@ async def qb_leech(client, message):
 
 
 async def jd_leech(client, message):
-    bot_loop.create_task(Mirror(client, message, is_leech=True, is_jd=True).new_event())
+    bot_loop.create_task(
+        Mirror(client, message, is_leech=True, is_jd=True).new_event()
+    )
 
 
 async def nzb_leech(client, message):

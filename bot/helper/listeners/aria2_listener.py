@@ -1,18 +1,25 @@
-from aiofiles.os import remove, path as aiopath
-from asyncio import sleep
+import contextlib
 from time import time
+from asyncio import sleep
 
-from bot import aria2, task_dict_lock, task_dict, LOGGER, config_dict, intervals
-from ..ext_utils.bot_utils import loop_thread, bt_selection_buttons, sync_to_async
-from ..ext_utils.files_utils import clean_unwanted
-from ..ext_utils.status_utils import get_task_by_gid
-from ..ext_utils.task_manager import stop_duplicate_check
-from ..mirror_leech_utils.status_utils.aria2_status import Aria2Status
-from ..telegram_helper.message_utils import (
+from aiofiles.os import path as aiopath
+from aiofiles.os import remove
+
+from bot import LOGGER, aria2, intervals, task_dict, config_dict, task_dict_lock
+from bot.helper.ext_utils.bot_utils import (
+    loop_thread,
+    sync_to_async,
+    bt_selection_buttons,
+)
+from bot.helper.ext_utils.files_utils import clean_unwanted
+from bot.helper.ext_utils.status_utils import get_task_by_gid
+from bot.helper.ext_utils.task_manager import stop_duplicate_check
+from bot.helper.telegram_helper.message_utils import (
     send_message,
     delete_message,
     update_status_message,
 )
+from bot.helper.mirror_leech_utils.status_utils.aria2_status import Aria2Status
 
 
 @loop_thread
@@ -35,9 +42,8 @@ async def _on_download_started(api, gid):
                         break
                     await sync_to_async(download.update)
         return
-    else:
-        LOGGER.info(f"onDownloadStarted: {download.name} - Gid: {gid}")
-        await sleep(1)
+    LOGGER.info(f"onDownloadStarted: {download.name} - Gid: {gid}")
+    await sleep(1)
 
     await sleep(2)
     if task := await get_task_by_gid(gid):
@@ -101,10 +107,8 @@ async def _on_bt_download_complete(api, gid):
             for file_o in res:
                 f_path = file_o.path
                 if not file_o.selected and await aiopath.exists(f_path):
-                    try:
+                    with contextlib.suppress(Exception):
                         await remove(f_path)
-                    except:
-                        pass
             await clean_unwanted(download.dir)
         if task.listener.seed:
             try:
@@ -124,7 +128,11 @@ async def _on_bt_download_complete(api, gid):
         if intervals["stopAll"]:
             return
         await sync_to_async(download.update)
-        if task.listener.seed and download.is_complete and await get_task_by_gid(gid):
+        if (
+            task.listener.seed
+            and download.is_complete
+            and await get_task_by_gid(gid)
+        ):
             LOGGER.info(f"Cancelling Seed: {download.name}")
             await task.listener.on_upload_error(
                 f"Seeding stopped with Ratio: {task.ratio()} and Time: {task.seeding_time()}"
@@ -139,7 +147,9 @@ async def _on_bt_download_complete(api, gid):
         elif task.listener.seed and not task.listener.is_cancelled:
             async with task_dict_lock:
                 if task.listener.mid not in task_dict:
-                    await sync_to_async(api.remove, [download], force=True, files=True)
+                    await sync_to_async(
+                        api.remove, [download], force=True, files=True
+                    )
                     return
                 task_dict[task.listener.mid] = Aria2Status(task.listener, gid, True)
                 task_dict[task.listener.mid].start_time = seed_start_time

@@ -1,16 +1,15 @@
-from __future__ import print_function
-
-import argparse
-import glob
-import googleapiclient.discovery
-import json
 import os
-import pickle
-import progress.bar
 import sys
+import glob
+import json
 import time
-from google.auth.transport.requests import Request
+import pickle
+import argparse
+
+import progress.bar
+import googleapiclient.discovery
 from google_auth_oauthlib.flow import InstalledAppFlow
+from google.auth.transport.requests import Request
 
 stt = time.time()
 
@@ -30,7 +29,11 @@ parse.add_argument(
     help="Specify the relative path for the credentials file.",
 )
 parse.add_argument(
-    "--yes", "-y", default=False, action="store_true", help="Skips the sanity prompt."
+    "--yes",
+    "-y",
+    default=False,
+    action="store_true",
+    help="Skips the sanity prompt.",
 )
 parsereq = parse.add_argument_group("required arguments")
 parsereq.add_argument(
@@ -43,7 +46,7 @@ did = args.drive_id
 credentials = glob.glob(args.credentials)
 
 try:
-    open(credentials[0], "r")
+    open(credentials[0])
     print(">> Found credentials.")
 except IndexError:
     print(">> No credentials found.")
@@ -85,7 +88,7 @@ batch = drive.new_batch_http_request()
 aa = glob.glob(f"{acc_dir}/*.json")
 pbar = progress.bar.Bar("Readying accounts", max=len(aa))
 for i in aa:
-    ce = json.loads(open(i, "r").read())["client_email"]
+    ce = json.loads(open(i).read())["client_email"]
     batch.add(
         drive.permissions().create(
             fileId=did,
@@ -101,4 +104,4 @@ batch.execute()
 print("Complete.")
 hours, rem = divmod((time.time() - stt), 3600)
 minutes, sec = divmod(rem, 60)
-print("Elapsed Time:\n{:0>2}:{:0>2}:{:05.2f}".format(int(hours), int(minutes), sec))
+print(f"Elapsed Time:\n{int(hours):0>2}:{int(minutes):0>2}:{sec:05.2f}")

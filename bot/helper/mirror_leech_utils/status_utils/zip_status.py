@@ -1,11 +1,11 @@
 from time import time
 
 from bot import LOGGER, subprocess_lock
-from ...ext_utils.files_utils import get_path_size
-from ...ext_utils.status_utils import (
-    get_readable_file_size,
+from bot.helper.ext_utils.files_utils import get_path_size
+from bot.helper.ext_utils.status_utils import (
     MirrorStatus,
     get_readable_time,
+    get_readable_file_size,
 )
 
 
@@ -56,7 +56,9 @@ class ZipStatus:
         if self.listener.new_dir:
             self._proccessed_bytes = await get_path_size(self.listener.new_dir)
         else:
-            self._proccessed_bytes = await get_path_size(self.listener.dir) - self._size
+            self._proccessed_bytes = (
+                await get_path_size(self.listener.dir) - self._size
+            )
 
     def processed_bytes(self):
         return get_readable_file_size(self._proccessed_bytes)

@@ -1,11 +1,11 @@
 from bot import LOGGER, jd_lock, jd_downloads
-from ...ext_utils.bot_utils import async_to_sync
-from ...ext_utils.jdownloader_booter import jdownloader
-from ...ext_utils.status_utils import (
+from bot.helper.ext_utils.bot_utils import async_to_sync
+from bot.helper.ext_utils.status_utils import (
     MirrorStatus,
-    get_readable_file_size,
     get_readable_time,
+    get_readable_file_size,
 )
+from bot.helper.ext_utils.jdownloader_booter import jdownloader
 
 
 def _get_combined_info(result):
@@ -88,7 +88,9 @@ class JDownloaderStatus:
         return get_readable_file_size(self._info.get("bytesTotal", 0))
 
     def eta(self):
-        return get_readable_time(eta) if (eta := self._info.get("eta", False)) else "-"
+        return (
+            get_readable_time(eta) if (eta := self._info.get("eta", False)) else "-"
+        )
 
     def status(self):
         async_to_sync(self._update)
@@ -106,7 +108,9 @@ class JDownloaderStatus:
     async def cancel_task(self):
         self.listener.is_cancelled = True
         LOGGER.info(f"Cancelling Download: {self.name()}")
-        await jdownloader.device.downloads.remove_links(package_ids=jd_downloads[self._gid]["ids"])
+        await jdownloader.device.downloads.remove_links(
+            package_ids=jd_downloads[self._gid]["ids"]
+        )
         async with jd_lock:
             del jd_downloads[self._gid]
         await self.listener.on_download_error("Download cancelled by user!")

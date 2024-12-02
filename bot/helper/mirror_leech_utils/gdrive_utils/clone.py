@@ -1,17 +1,18 @@
-from googleapiclient.errors import HttpError
-from logging import getLogger
 from os import path as ospath
+from time import time
+from logging import getLogger
+
 from tenacity import (
+    RetryError,
     retry,
     wait_exponential,
     stop_after_attempt,
     retry_if_exception_type,
-    RetryError,
 )
-from time import time
+from googleapiclient.errors import HttpError
 
-from ...ext_utils.bot_utils import async_to_sync
-from ...mirror_leech_utils.gdrive_utils.helper import GoogleDriveHelper
+from bot.helper.ext_utils.bot_utils import async_to_sync
+from bot.helper.mirror_leech_utils.gdrive_utils.helper import GoogleDriveHelper
 
 LOGGER = getLogger(__name__)
 
@@ -34,9 +35,9 @@ class GoogleDriveClone(GoogleDriveHelper):
         elif self.listener.up_dest.startswith("tp:"):
             self.listener.up_dest = self.listener.up_dest.replace("tp:", "", 1)
             self.use_sa = False
-        elif self.listener.up_dest.startswith("sa:") or self.listener.link.startswith(
+        elif self.listener.up_dest.startswith(
             "sa:"
-        ):
+        ) or self.listener.link.startswith("sa:"):
             self.listener.up_dest = self.listener.up_dest.replace("sa:", "", 1)
             self.use_sa = True
 
@@ -58,7 +59,9 @@ class GoogleDriveClone(GoogleDriveHelper):
             meta = self.get_file_metadata(file_id)
             mime_type = meta.get("mimeType")
             if mime_type == self.G_DRIVE_DIR_MIME_TYPE:
-                dir_id = self.create_directory(meta.get("name"), self.listener.up_dest)
+                dir_id = self.create_directory(
+                    meta.get("name"), self.listener.up_dest
+                )
                 self._cloneFolder(meta.get("name"), meta.get("id"), dir_id)
                 durl = self.G_DRIVE_DIR_BASE_DOWNLOAD_URL.format(dir_id)
                 if self.listener.is_cancelled:
@@ -124,6 +127,7 @@ class GoogleDriveClone(GoogleDriveHelper):
                 self.total_time = int(time() - self._start_time)
             if self.listener.is_cancelled:
                 break
+        return None
 
     @retry(
         wait=wait_exponential(multiplier=2, min=3, max=6),
@@ -140,7 +144,9 @@ class GoogleDriveClone(GoogleDriveHelper):
             )
         except HttpError as err:
             if err.resp.get("content-type", "").startswith("application/json"):
-                reason = eval(err.content).get("error").get("errors")[0].get("reason")
+                reason = (
+                    eval(err.content).get("error").get("errors")[0].get("reason")
+                )
                 if reason not in [
                     "userRateLimitExceeded",
                     "dailyLimitExceeded",
@@ -155,11 +161,10 @@ class GoogleDriveClone(GoogleDriveHelper):
                             f"Reached maximum number of service accounts switching, which is {self.sa_count}"
                         )
                         raise err
-                    else:
-                        if self.listener.is_cancelled:
-                            return
-                        self.switch_service_account()
-                        return self._copyFile(file_id, dest_id)
+                    if self.listener.is_cancelled:
+                        return None
+                    self.switch_service_account()
+                    return self._copyFile(file_id, dest_id)
                 else:
                     LOGGER.error(f"Got: {reason}")
                     raise err

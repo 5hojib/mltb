@@ -1,12 +1,12 @@
-from json import dumps, loads, JSONDecodeError
-from httpx import AsyncClient, RequestError
-from httpx import AsyncHTTPTransport
+from json import JSONDecodeError, dumps, loads
 from functools import wraps
+
+from httpx import AsyncClient, RequestError, AsyncHTTPTransport
 
 from .exception import (
     MYJDApiException,
-    MYJDConnectionException,
     MYJDDecodeException,
+    MYJDConnectionException,
 )
 
 
@@ -48,7 +48,6 @@ class Jd:
 
 
 class Config:
-
     def __init__(self, device):
         self.device = device
         self.url = "/config"
@@ -59,8 +58,7 @@ class Config:
         """
         if params is None:
             return await self.device.action(f"{self.url}/list", params)
-        else:
-            return await self.device.action(f"{self.url}/list")
+        return await self.device.action(f"{self.url}/list")
 
     async def listEnum(self, type):
         """
@@ -152,7 +150,6 @@ class Config:
 
 
 class DownloadController:
-
     def __init__(self, device):
         self.device = device
         self.url = "/downloadcontroller"
@@ -225,11 +222,12 @@ class Extension:
         return await self.device.action(f"{self.url}/isEnabled", params=[id])
 
     async def setEnabled(self, id, enabled):
-        return await self.device.action(f"{self.url}/setEnabled", params=[id, enabled])
+        return await self.device.action(
+            f"{self.url}/setEnabled", params=[id, enabled]
+        )
 
 
 class Linkgrabber:
-
     def __init__(self, device):
         self.device = device
         self.url = "/linkgrabberv2"
@@ -451,7 +449,11 @@ class Linkgrabber:
         return await self.device.action(f"{self.url}/setDownloadDirectory", params)
 
     async def move_to_new_package(
-        self, name: str, path: str, link_ids: list = None, package_ids: list = None
+        self,
+        name: str,
+        path: str,
+        link_ids: list | None = None,
+        package_ids: list | None = None,
     ):
         # Requires at least a link_ids or package_ids list, or both.
         if link_ids is None:
@@ -520,7 +522,6 @@ class Linkgrabber:
 
 
 class Downloads:
-
     def __init__(self, device):
         self.device = device
         self.url = "/downloadsV2"
@@ -669,7 +670,6 @@ class Downloads:
 
 
 class Captcha:
-
     def __init__(self, device):
         self.device = device
         self.url = "/captcha"
@@ -685,7 +685,6 @@ class Captcha:
 
 
 class Jddevice:
-
     def __init__(self, jd):
         """This functions initializates the device instance.
         It uses the provided dictionary to create the device.
@@ -713,7 +712,6 @@ class Jddevice:
 
 
 class clientSession(AsyncClient):
-
     @wraps(AsyncClient.request)
     async def request(self, method: str, url: str, **kwargs):
         kwargs.setdefault("timeout", 3)
@@ -722,7 +720,6 @@ class clientSession(AsyncClient):
 
 
 class MyJdApi:
-
     def __init__(self):
         self.__api_url = "http://127.0.0.1:3128"
         self._http_session = None
@@ -785,6 +782,8 @@ class MyJdApi:
             if data is not None:
                 msg += "DATA:\n" + data
             raise (
-                MYJDApiException.get_exception(error_msg["src"], error_msg["type"], msg)
+                MYJDApiException.get_exception(
+                    error_msg["src"], error_msg["type"], msg
+                )
             )
         return loads(response)

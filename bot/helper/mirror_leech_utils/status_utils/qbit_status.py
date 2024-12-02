@@ -1,11 +1,11 @@
 from asyncio import sleep, gather
 
-from bot import LOGGER, qbittorrent_client, qb_torrents, qb_listener_lock
-from ...ext_utils.bot_utils import sync_to_async
-from ...ext_utils.status_utils import (
+from bot import LOGGER, qb_torrents, qb_listener_lock, qbittorrent_client
+from bot.helper.ext_utils.bot_utils import sync_to_async
+from bot.helper.ext_utils.status_utils import (
     MirrorStatus,
-    get_readable_file_size,
     get_readable_time,
+    get_readable_file_size,
 )
 
 
@@ -40,8 +40,7 @@ class QbittorrentStatus:
     def name(self):
         if self._info.state in ["metaDL", "checkingResumeData"]:
             return f"[METADATA]{self.listener.name}"
-        else:
-            return self.listener.name
+        return self.listener.name
 
     def size(self):
         return get_readable_file_size(self._info.size)
@@ -54,16 +53,15 @@ class QbittorrentStatus:
         state = self._info.state
         if state == "queuedDL" or self.queued:
             return MirrorStatus.STATUS_QUEUEDL
-        elif state == "queuedUP":
+        if state == "queuedUP":
             return MirrorStatus.STATUS_QUEUEUP
-        elif state in ["pausedDL", "pausedUP"]:
+        if state in ["pausedDL", "pausedUP"]:
             return MirrorStatus.STATUS_PAUSED
-        elif state in ["checkingUP", "checkingDL"]:
+        if state in ["checkingUP", "checkingDL"]:
             return MirrorStatus.STATUS_CHECKING
-        elif state in ["stalledUP", "uploading"] and self.seeding:
+        if state in ["stalledUP", "uploading"] and self.seeding:
             return MirrorStatus.STATUS_SEEDING
-        else:
-            return MirrorStatus.STATUS_DOWNLOADING
+        return MirrorStatus.STATUS_DOWNLOADING
 
     def seeders_num(self):
         return self._info.num_seeds

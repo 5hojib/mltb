@@ -1,18 +1,19 @@
 from asyncio import Event
 
 from bot import (
-    config_dict,
+    LOGGER,
     queued_dl,
     queued_up,
-    non_queued_up,
+    config_dict,
     non_queued_dl,
+    non_queued_up,
     queue_dict_lock,
-    LOGGER,
 )
+from bot.helper.mirror_leech_utils.gdrive_utils.search import GoogleDriveSearch
+
 from .bot_utils import sync_to_async, get_telegraph_list
 from .files_utils import get_base_name
 from .links_utils import is_gdrive_id
-from ..mirror_leech_utils.gdrive_utils.search import GoogleDriveSearch
 
 
 async def stop_duplicate_check(listener):
@@ -56,7 +57,9 @@ async def stop_duplicate_check(listener):
 async def check_running_tasks(listener, state="dl"):
     all_limit = config_dict["QUEUE_ALL"]
     state_limit = (
-        config_dict["QUEUE_DOWNLOAD"] if state == "dl" else config_dict["QUEUE_UPLOAD"]
+        config_dict["QUEUE_DOWNLOAD"]
+        if state == "dl"
+        else config_dict["QUEUE_UPLOAD"]
     )
     event = None
     is_over_limit = False

@@ -1,8 +1,8 @@
 from time import time
 
-from bot import aria2, LOGGER
-from ...ext_utils.bot_utils import sync_to_async
-from ...ext_utils.status_utils import MirrorStatus, get_readable_time
+from bot import LOGGER, aria2
+from bot.helper.ext_utils.bot_utils import sync_to_async
+from bot.helper.ext_utils.status_utils import MirrorStatus, get_readable_time
 
 
 def get_download(gid, old_info=None):
@@ -55,14 +55,12 @@ class Aria2Status:
         if self._download.is_waiting or self.queued:
             if self.seeding:
                 return MirrorStatus.STATUS_QUEUEUP
-            else:
-                return MirrorStatus.STATUS_QUEUEDL
-        elif self._download.is_paused:
+            return MirrorStatus.STATUS_QUEUEDL
+        if self._download.is_paused:
             return MirrorStatus.STATUS_PAUSED
-        elif self._download.seeder and self.seeding:
+        if self._download.seeder and self.seeding:
             return MirrorStatus.STATUS_SEEDING
-        else:
-            return MirrorStatus.STATUS_DOWNLOADING
+        return MirrorStatus.STATUS_DOWNLOADING
 
     def seeders_num(self):
         return self._download.num_seeders
@@ -96,7 +94,9 @@ class Aria2Status:
             await self.listener.on_upload_error(
                 f"Seeding stopped with Ratio: {self.ratio()} and Time: {self.seeding_time()}"
             )
-            await sync_to_async(aria2.remove, [self._download], force=True, files=True)
+            await sync_to_async(
+                aria2.remove, [self._download], force=True, files=True
+            )
         elif downloads := self._download.followed_by:
             LOGGER.info(f"Cancelling Download: {self.name()}")
             await self.listener.on_download_error("Download cancelled by user!")
@@ -110,4 +110,6 @@ class Aria2Status:
                 LOGGER.info(f"Cancelling Download: {self.name()}")
                 msg = "Download stopped by user!"
             await self.listener.on_download_error(msg)
-            await sync_to_async(aria2.remove, [self._download], force=True, files=True)
+            await sync_to_async(
+                aria2.remove, [self._download], force=True, files=True
+            )

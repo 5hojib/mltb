@@ -1,17 +1,18 @@
-import errno
 import os
-import pickle
 import sys
-from argparse import ArgumentParser
-from base64 import b64decode
+import errno
+import pickle
 from glob import glob
-from google.auth.transport.requests import Request
+from json import loads
+from time import sleep
+from base64 import b64decode
+from random import choice
+from argparse import ArgumentParser
+
+from googleapiclient.errors import HttpError
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
-from json import loads
-from random import choice
-from time import sleep
+from google.auth.transport.requests import Request
 
 SCOPES = [
     "https://www.googleapis.com/auth/drive",
@@ -95,7 +96,7 @@ def _create_projects(cloud, count):
     for i in project_create_ops:
         while True:
             resp = cloud.operations().get(name=i).execute()
-            if "done" in resp and resp["done"]:
+            if resp.get("done"):
                 break
             sleep(3)
     return new_projs
@@ -118,7 +119,7 @@ def _list_sas(iam, project):
         .list(name=f"projects/{project}", pageSize=100)
         .execute()
     )
-    return resp["accounts"] if "accounts" in resp else []
+    return resp.get("accounts", [])
 
 
 # Create Keys Batch Handler
@@ -194,7 +195,7 @@ def serviceaccountfactory(
     download_keys=None,
 ):
     selected_projects = []
-    proj_id = loads(open(credentials, "r").read())["installed"]["project_id"]
+    proj_id = loads(open(credentials).read())["installed"]["project_id"]
     creds = None
     if os.path.exists(token):
         with open(token, "rb") as t:
@@ -296,6 +297,8 @@ def serviceaccountfactory(
         for i in std:
             print(f"Deleting service accounts in {i}")
             _delete_sas(iam, i)
+        return None
+    return None
 
 
 if __name__ == "__main__":
@@ -307,7 +310,9 @@ if __name__ == "__main__":
         help="Specify an alternate directory to output the credential files.",
     )
     parse.add_argument(
-        "--token", default="token_sa.pickle", help="Specify the pickle token file path."
+        "--token",
+        default="token_sa.pickle",
+        help="Specify the pickle token file path.",
     )
     parse.add_argument(
         "--credentials",
@@ -371,15 +376,17 @@ if __name__ == "__main__":
     if not os.path.exists(args.credentials):
         options = glob("*.json")
         print(
-            "No credentials found at %s. Please enable the Drive API in:\n"
+            f"No credentials found at {args.credentials}. Please enable the Drive API in:\n"
             "https://developers.google.com/drive/api/v3/quickstart/python\n"
-            "and save the json file as credentials.json" % args.credentials
+            "and save the json file as credentials.json"
         )
         if not options:
-            exit(-1)
+            sys.exit(-1)
         else:
             print("Select a credentials file below.")
-            inp_options = [str(i) for i in list(range(1, len(options) + 1))] + options
+            inp_options = [
+                str(i) for i in list(range(1, len(options) + 1))
+            ] + options
             for i in range(len(options)):
                 print("  %d) %s" % (i + 1, options[i]))
             inp = None

@@ -1,17 +1,19 @@
-from httpx import AsyncClient
+import contextlib
 from html import escape
-from pyrogram.filters import command, regex
-from pyrogram.handlers import MessageHandler, CallbackQueryHandler
 from urllib.parse import quote
 
-from bot import bot, LOGGER, config_dict, qbittorrent_client
-from ..helper.ext_utils.bot_utils import sync_to_async, new_task
-from ..helper.ext_utils.status_utils import get_readable_file_size
-from ..helper.ext_utils.telegraph_helper import telegraph
-from ..helper.telegram_helper.bot_commands import BotCommands
-from ..helper.telegram_helper.button_build import ButtonMaker
-from ..helper.telegram_helper.filters import CustomFilters
-from ..helper.telegram_helper.message_utils import edit_message, send_message
+from httpx import AsyncClient
+from pyrogram.filters import regex, command
+from pyrogram.handlers import MessageHandler, CallbackQueryHandler
+
+from bot import LOGGER, bot, config_dict, qbittorrent_client
+from bot.helper.ext_utils.bot_utils import new_task, sync_to_async
+from bot.helper.ext_utils.status_utils import get_readable_file_size
+from bot.helper.telegram_helper.filters import CustomFilters
+from bot.helper.ext_utils.telegraph_helper import telegraph
+from bot.helper.telegram_helper.bot_commands import BotCommands
+from bot.helper.telegram_helper.button_build import ButtonMaker
+from bot.helper.telegram_helper.message_utils import edit_message, send_message
 
 PLUGINS = []
 SITES = None
@@ -24,7 +26,9 @@ async def initiate_search_tools():
         globals()["PLUGINS"] = []
         if qb_plugins:
             names = [plugin["name"] for plugin in qb_plugins]
-            await sync_to_async(qbittorrent_client.search_uninstall_plugin, names=names)
+            await sync_to_async(
+                qbittorrent_client.search_uninstall_plugin, names=names
+            )
         await sync_to_async(qbittorrent_client.search_install_plugin, SEARCH_PLUGINS)
     elif qb_plugins:
         for plugin in qb_plugins:
@@ -71,9 +75,7 @@ async def search(key, site, message, method):
             if site == "all":
                 api = f"{SEARCH_API_LINK}/api/v1/all/recent?limit={SEARCH_LIMIT}"
             else:
-                api = (
-                    f"{SEARCH_API_LINK}/api/v1/recent?site={site}&limit={SEARCH_LIMIT}"
-                )
+                api = f"{SEARCH_API_LINK}/api/v1/recent?site={site}&limit={SEARCH_LIMIT}"
         try:
             async with AsyncClient() as client:
                 response = await client.get(api)
@@ -88,9 +90,7 @@ async def search(key, site, message, method):
             if method == "apitrend":
                 msg += f" <b>trending result(s)\nTorrent Site:- <i>{SITES.get(site)}</i></b>"
             elif method == "apirecent":
-                msg += (
-                    f" <b>recent result(s)\nTorrent Site:- <i>{SITES.get(site)}</i></b>"
-                )
+                msg += f" <b>recent result(s)\nTorrent Site:- <i>{SITES.get(site)}</i></b>"
             else:
                 msg += f" <b>result(s) for <i>{key}</i>\nTorrent Site:- <i>{SITES.get(site)}</i></b>"
             search_results = search_results["data"]
@@ -100,7 +100,10 @@ async def search(key, site, message, method):
     else:
         LOGGER.info(f"PLUGINS Searching: {key} from {site}")
         search = await sync_to_async(
-            qbittorrent_client.search_start, pattern=key, plugins=site, category="all"
+            qbittorrent_client.search_start,
+            pattern=key,
+            plugins=site,
+            category="all",
         )
         search_id = search.id
         while True:
@@ -146,27 +149,29 @@ async def get_result(search_results, key, message, method):
     for index, result in enumerate(search_results, start=1):
         if method.startswith("api"):
             try:
-                if "name" in result.keys():
+                if "name" in result:
                     msg += f"<code><a href='{result['url']}'>{escape(result['name'])}</a></code><br>"
-                if "torrents" in result.keys():
+                if "torrents" in result:
                     for subres in result["torrents"]:
                         msg += f"<b>Quality: </b>{subres['quality']} | <b>Type: </b>{subres['type']} | "
                         msg += f"<b>Size: </b>{subres['size']}<br>"
-                        if "torrent" in subres.keys():
-                            msg += f"<a href='{subres['torrent']}'>Direct Link</a><br>"
-                        elif "magnet" in subres.keys():
+                        if "torrent" in subres:
+                            msg += (
+                                f"<a href='{subres['torrent']}'>Direct Link</a><br>"
+                            )
+                        elif "magnet" in subres:
                             msg += "<b>Share Magnet to</b> "
                             msg += f"<a href='http://t.me/share/url?url={subres['magnet']}'>Telegram</a><br>"
                     msg += "<br>"
                 else:
                     msg += f"<b>Size: </b>{result['size']}<br>"
-                    try:
+                    with contextlib.suppress(Exception):
                         msg += f"<b>Seeders: </b>{result['seeders']} | <b>Leechers: </b>{result['leechers']}<br>"
-                    except:
-                        pass
-                    if "torrent" in result.keys():
-                        msg += f"<a href='{result['torrent']}'>Direct Link</a><br><br>"
-                    elif "magnet" in result.keys():
+                    if "torrent" in result:
+                        msg += (
+                            f"<a href='{result['torrent']}'>Direct Link</a><br><br>"
+                        )
+                    elif "magnet" in result:
                         msg += "<b>Share Magnet to</b> "
                         msg += f"<a href='http://t.me/share/url?url={quote(result['magnet'])}'>Telegram</a><br><br>"
                     else:
@@ -206,7 +211,8 @@ async def get_result(search_results, key, message, method):
     ]
     if len(path) > 1:
         await edit_message(
-            message, f"<b>Editing</b> {len(telegraph_content)} <b>Telegraph pages.</b>"
+            message,
+            f"<b>Editing</b> {len(telegraph_content)} <b>Telegraph pages.</b>",
         )
         await telegraph.edit_telegraph(path, telegraph_content)
     return f"https://telegra.ph/{path[0]}"
@@ -321,4 +327,6 @@ bot.add_handler(
         & CustomFilters.authorized,
     )
 )
-bot.add_handler(CallbackQueryHandler(torrent_search_update, filters=regex("^torser")))
+bot.add_handler(
+    CallbackQueryHandler(torrent_search_update, filters=regex("^torser"))
+)

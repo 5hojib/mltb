@@ -1,12 +1,15 @@
-from aria2p import API as ariaAPI, Client as ariaClient
-from flask import Flask, request
-from logging import getLogger, FileHandler, StreamHandler, INFO, basicConfig
-from qbittorrentapi import NotFound404Error, Client as qbClient
 from time import sleep
-from sabnzbdapi import SabnzbdClient
-from asyncio import get_running_loop, new_event_loop, set_event_loop
+from asyncio import new_event_loop, set_event_loop, get_running_loop
+from logging import INFO, FileHandler, StreamHandler, getLogger, basicConfig
+
+from flask import Flask, request
+from aria2p import API as ariaAPI
+from aria2p import Client as ariaClient
+from qbittorrentapi import Client as qbClient
+from qbittorrentapi import NotFound404Error
 
 from web.nodes import make_tree
+from sabnzbdapi import SabnzbdClient
 
 app = Flask(__name__)
 
@@ -721,7 +724,7 @@ def re_verfiy(paused, resumed, hash_id):
 
 @app.route("/app/files/<string:id_>", methods=["GET"])
 def list_torrent_contents(id_):
-    if "pin_code" not in request.args.keys():
+    if "pin_code" not in request.args:
         return code_page.replace("{form_url}", f"/app/files/{id_}")
 
     pincode = ""
@@ -736,8 +739,7 @@ def list_torrent_contents(id_):
     if id_.startswith("SABnzbd_nzo"):
 
         async def get_files():
-            res = await sabnzbd_client.get_files(id_)
-            return res
+            return await sabnzbd_client.get_files(id_)
 
         res = web_loop.run_until_complete(get_files())
         cont = make_tree(res, "nzb")
@@ -757,7 +759,6 @@ def set_priority(id_):
     data = dict(request.form)
 
     if id_.startswith("SABnzbd_nzo"):
-
         to_remove = []
         for i, value in data.items():
             if "filenode" in i and value != "on":

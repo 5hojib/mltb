@@ -1,31 +1,34 @@
-from aiofiles.os import remove, path as aiopath
-from pyrogram.filters import command, regex
+import contextlib
+
+from aiofiles.os import path as aiopath
+from aiofiles.os import remove
+from pyrogram.filters import regex, command
 from pyrogram.handlers import MessageHandler, CallbackQueryHandler
 
 from bot import (
+    LOGGER,
+    OWNER_ID,
     bot,
     aria2,
     task_dict,
-    task_dict_lock,
-    OWNER_ID,
     user_data,
-    LOGGER,
     config_dict,
-    qbittorrent_client,
     sabnzbd_client,
+    task_dict_lock,
+    qbittorrent_client,
 )
-from ..helper.ext_utils.bot_utils import (
-    bt_selection_buttons,
-    sync_to_async,
+from bot.helper.ext_utils.bot_utils import (
     new_task,
+    sync_to_async,
+    bt_selection_buttons,
 )
-from ..helper.ext_utils.status_utils import get_task_by_gid, MirrorStatus
-from ..helper.telegram_helper.bot_commands import BotCommands
-from ..helper.telegram_helper.filters import CustomFilters
-from ..helper.telegram_helper.message_utils import (
+from bot.helper.ext_utils.status_utils import MirrorStatus, get_task_by_gid
+from bot.helper.telegram_helper.filters import CustomFilters
+from bot.helper.telegram_helper.bot_commands import BotCommands
+from bot.helper.telegram_helper.message_utils import (
     send_message,
-    send_status_message,
     delete_message,
+    send_status_message,
 )
 
 
@@ -57,10 +60,8 @@ async def select(_, message):
         await send_message(message, msg)
         return
 
-    if (
-        OWNER_ID != user_id
-        and task.listener.user_id != user_id
-        and (user_id not in user_data or not user_data[user_id].get("is_sudo"))
+    if user_id not in (OWNER_ID, task.listener.user_id) and (
+        user_id not in user_data or not user_data[user_id].get("is_sudo")
     ):
         await send_message(message, "This task is not for you!")
         return
@@ -140,10 +141,8 @@ async def get_confirm(_, query):
                         f_paths = [f"{path}/{f.name}", f"{path}/{f.name}.!qB"]
                         for f_path in f_paths:
                             if await aiopath.exists(f_path):
-                                try:
+                                with contextlib.suppress(Exception):
                                     await remove(f_path)
-                                except:
-                                    pass
                 if not task.queued:
                     await sync_to_async(
                         qbittorrent_client.torrents_resume, torrent_hashes=id_
@@ -152,10 +151,8 @@ async def get_confirm(_, query):
                 res = await sync_to_async(aria2.client.get_files, id_)
                 for f in res:
                     if f["selected"] == "false" and await aiopath.exists(f["path"]):
-                        try:
+                        with contextlib.suppress(Exception):
                             await remove(f["path"])
-                        except:
-                            pass
                 if not task.queued:
                     try:
                         await sync_to_async(aria2.client.unpause, id_)

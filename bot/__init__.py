@@ -1,31 +1,42 @@
+from os import path as ospath
+from os import remove, environ
 from sys import exit
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from aria2p import API as ariaAPI, Client as ariaClient
+from time import time
+from shutil import rmtree
+from socket import setdefaulttimeout
 from asyncio import Lock, new_event_loop, set_event_loop
-from dotenv import load_dotenv, dotenv_values
 from logging import (
-    getLogger,
+    INFO,
+    ERROR,
     FileHandler,
     StreamHandler,
-    INFO,
+    getLogger,
     basicConfig,
-    error as log_error,
-    info as log_info,
-    warning as log_warning,
-    ERROR,
 )
-from shutil import rmtree
-from os import remove, path as ospath, environ
-from pymongo.mongo_client import MongoClient
-from pymongo.server_api import ServerApi
-from pyrogram import Client as TgClient, enums
-from qbittorrentapi import Client as QbClient
-from sabnzbdapi import SabnzbdClient
-from socket import setdefaulttimeout
+from logging import (
+    info as log_info,
+)
+from logging import (
+    error as log_error,
+)
+from logging import (
+    warning as log_warning,
+)
 from subprocess import Popen, run
-from time import time
-from tzlocal import get_localzone
+
+from aria2p import API as ariaAPI
+from aria2p import Client as ariaClient
+from dotenv import load_dotenv, dotenv_values
 from uvloop import install
+from tzlocal import get_localzone
+from pyrogram import Client as TgClient
+from pyrogram import enums
+from qbittorrentapi import Client as QbClient
+from pymongo.server_api import ServerApi
+from pymongo.mongo_client import MongoClient
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
+from sabnzbdapi import SabnzbdClient
 
 # from faulthandler import enable as faulthandler_enable
 # faulthandler_enable()
@@ -158,7 +169,7 @@ else:
 if ospath.exists("cfg.zip"):
     if ospath.exists("/JDownloader/cfg"):
         rmtree("/JDownloader/cfg", ignore_errors=True)
-    run(["7z", "x", "cfg.zip", "-o/JDownloader"])
+    run(["7z", "x", "cfg.zip", "-o/JDownloader"], check=False)
     remove("cfg.zip")
 
 if not ospath.exists(".netrc"):
@@ -167,6 +178,7 @@ if not ospath.exists(".netrc"):
 run(
     "chmod 600 .netrc && cp .netrc /root/.netrc && chmod +x aria-nox-nzb.sh && ./aria-nox-nzb.sh",
     shell=True,
+    check=False,
 )
 
 OWNER_ID = environ.get("OWNER_ID", "")
@@ -241,7 +253,7 @@ if len(AUTHORIZED_CHATS) != 0:
         chat_id, *thread_ids = id_.split("|")
         chat_id = int(chat_id.strip())
         if thread_ids:
-            thread_ids = list(map(lambda x: int(x.strip()), thread_ids))
+            thread_ids = [int(x.strip()) for x in thread_ids]
             user_data[chat_id] = {"is_auth": True, "thread_ids": thread_ids}
         else:
             user_data[chat_id] = {"is_auth": True}
@@ -267,9 +279,9 @@ if len(JD_EMAIL) == 0 or len(JD_PASS) == 0:
 
 USENET_SERVERS = environ.get("USENET_SERVERS", "")
 try:
-    if len(USENET_SERVERS) == 0:
-        USENET_SERVERS = []
-    elif (us := eval(USENET_SERVERS)) and not us[0].get("host"):
+    if len(USENET_SERVERS) == 0 or (
+        (us := eval(USENET_SERVERS)) and not us[0].get("host")
+    ):
         USENET_SERVERS = []
     else:
         USENET_SERVERS = eval(USENET_SERVERS)
@@ -518,8 +530,8 @@ if BASE_URL:
 if ospath.exists("accounts.zip"):
     if ospath.exists("accounts"):
         rmtree("accounts")
-    run(["7z", "x", "-o.", "-aoa", "accounts.zip", "accounts/*.json"])
-    run(["chmod", "-R", "777", "accounts"])
+    run(["7z", "x", "-o.", "-aoa", "accounts.zip", "accounts/*.json"], check=False)
+    run(["chmod", "-R", "777", "accounts"], check=False)
     remove("accounts.zip")
 if not ospath.exists("accounts"):
     config_dict["USE_SERVICE_ACCOUNTS"] = False

@@ -1,24 +1,26 @@
-from aiofiles.os import remove, path as aiopath
-from asyncio import gather, sleep
-from sabnzbdapi.exception import NotLoggedIn, LoginFailed
+from asyncio import sleep, gather
+
+from aiofiles.os import path as aiopath
+from aiofiles.os import remove
 
 from bot import (
-    task_dict,
-    task_dict_lock,
-    sabnzbd_client,
     LOGGER,
+    task_dict,
     config_dict,
+    sabnzbd_client,
+    task_dict_lock,
 )
-from ...ext_utils.bot_utils import bt_selection_buttons
-from ...ext_utils.task_manager import check_running_tasks
-from ...listeners.nzb_listener import on_download_start
-from ...ext_utils.db_handler import database
-from ...mirror_leech_utils.status_utils.nzb_status import SabnzbdStatus
-from ...telegram_helper.message_utils import (
+from sabnzbdapi.exception import LoginFailed, NotLoggedIn
+from bot.helper.ext_utils.bot_utils import bt_selection_buttons
+from bot.helper.ext_utils.db_handler import database
+from bot.helper.ext_utils.task_manager import check_running_tasks
+from bot.helper.listeners.nzb_listener import on_download_start
+from bot.helper.telegram_helper.message_utils import (
     send_message,
-    send_status_message,
     delete_message,
+    send_status_message,
 )
+from bot.helper.mirror_leech_utils.status_utils.nzb_status import SabnzbdStatus
 
 
 async def add_servers():
@@ -42,24 +44,24 @@ async def add_servers():
             except LoginFailed as e:
                 raise e
     elif not res and (
-        config_dict["USENET_SERVERS"]
-        and (
-            not config_dict["USENET_SERVERS"][0]["host"]
-            or not config_dict["USENET_SERVERS"][0]["username"]
-            or not config_dict["USENET_SERVERS"][0]["password"]
+        (
+            config_dict["USENET_SERVERS"]
+            and (
+                not config_dict["USENET_SERVERS"][0]["host"]
+                or not config_dict["USENET_SERVERS"][0]["username"]
+                or not config_dict["USENET_SERVERS"][0]["password"]
+            )
         )
         or not config_dict["USENET_SERVERS"]
     ):
         raise NotLoggedIn("Set USENET_SERVERS in bsetting or config!")
-    else:
-        if tasks := [
-            sabnzbd_client.add_server(server)
-            for server in config_dict["USENET_SERVERS"]
-        ]:
-            try:
-                await gather(*tasks)
-            except LoginFailed as e:
-                raise e
+    elif tasks := [
+        sabnzbd_client.add_server(server) for server in config_dict["USENET_SERVERS"]
+    ]:
+        try:
+            await gather(*tasks)
+        except LoginFailed as e:
+            raise e
 
 
 async def add_nzb(listener, path):
