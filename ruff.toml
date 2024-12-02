@@ -1,0 +1,43 @@
+fix = true
+unsafe-fixes = true
+line-length = 85
+target-version = "py310"
+
+[lint.isort]
+length-sort = true
+
+[lint.pylint]
+max-branches = 50
+max-statements = 100
+max-returns = 15
+max-args = 10
+
+[lint]
+select = [
+    "FURB", # refurb
+    "I",    # isort
+    "E",    # pycodestyle: error
+    "W",    # pycodestyle: warning
+    "UP",   # pyupgrade
+    "F",    # pyflakes
+    "SIM",  # flake8-simplify
+    "RET",  # flake8-return
+    "C4",   # flake8-comprehensions
+    "PERF", # perflint
+    "RUF",  # ruff
+    "TID",  # flake8-tidy-imports
+    "TCH",  # flake8-type-checking
+    "FA",   # flake8-future-annotations
+    "PL",   # pylint
+    "ARG",  # flake8-unused-arguments
+    "N",    # Naming
+]
+
+ignore = [
+    "E501",
+    "PLR2004",
+    "N806",
+    "PLR0913",
+    "PLR0915",
+    "PLR0912",
+]
