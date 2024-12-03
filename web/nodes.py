@@ -50,7 +50,7 @@ def get_folders(path):
 
 def make_tree(res, tool=False):
     if tool == "qbit":
-        parent = TorNode("Torrent")
+        parent = TorNode("QBITTORRENT")
         for i in res:
             folders = qb_get_folders(i.name)
             if len(folders) > 1:
@@ -86,7 +86,7 @@ def make_tree(res, tool=False):
                     progress=round(i.progress * 100, 5),
                 )
     elif tool == "aria":
-        parent = TorNode("Torrent")
+        parent = TorNode("ARIA2")
         for i in res:
             folders = get_folders(i["path"])
             priority = 1
@@ -130,7 +130,7 @@ def make_tree(res, tool=False):
                 )
 
     else:
-        parent = TorNode("Torrent")
+        parent = TorNode("SABNZBD+")
         priority = 1
         for i in res["files"]:
             TorNode(
