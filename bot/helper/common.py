@@ -1115,7 +1115,7 @@ class TaskConfig:
     async def proceed_ffmpeg(self, dl_path, gid):
         checked = False
         for ffmpeg_cmd in self.ffmpeg_cmds:
-            cmd = ["ffmpeg"] + ffmpeg_cmd
+            cmd = ["ffmpeg", *ffmpeg_cmd]
             if "-del" in cmd:
                 cmd.remove("-del")
                 delete_files = True
