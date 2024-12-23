@@ -1,19 +1,20 @@
-from googleapiclient.errors import HttpError
-from googleapiclient.http import MediaIoBaseDownload
 from io import FileIO
 from logging import getLogger
-from os import makedirs, path as ospath
+from os import makedirs
+from os import path as ospath
+
+from googleapiclient.errors import HttpError
+from googleapiclient.http import MediaIoBaseDownload
 from tenacity import (
-    retry,
-    wait_exponential,
-    stop_after_attempt,
-    retry_if_exception_type,
     RetryError,
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
 )
 
-from ...ext_utils.bot_utils import async_to_sync
-from ...ext_utils.bot_utils import SetInterval
-from ...mirror_leech_utils.gdrive_utils.helper import GoogleDriveHelper
+from bot.helper.ext_utils.bot_utils import SetInterval, async_to_sync
+from bot.helper.mirror_leech_utils.gdrive_utils.helper import GoogleDriveHelper
 
 LOGGER = getLogger(__name__)
 
@@ -37,7 +38,10 @@ class GoogleDriveDownload(GoogleDriveHelper):
             else:
                 makedirs(self._path, exist_ok=True)
                 self._download_file(
-                    file_id, self._path, self.listener.name, meta.get("mimeType")
+                    file_id,
+                    self._path,
+                    self.listener.name,
+                    meta.get("mimeType"),
                 )
         except Exception as err:
             if isinstance(err, RetryError):
@@ -59,7 +63,7 @@ class GoogleDriveDownload(GoogleDriveHelper):
         finally:
             self._updater.cancel()
             if self.listener.is_cancelled:
-                return
+                return None
             async_to_sync(self.listener.on_download_complete)
 
     def _download_folder(self, folder_id, path, folder_name):
@@ -83,8 +87,10 @@ class GoogleDriveDownload(GoogleDriveHelper):
             if mime_type == self.G_DRIVE_DIR_MIME_TYPE:
                 self._download_folder(file_id, path, filename)
             elif not ospath.isfile(
-                f"{path}{filename}"
-            ) and not filename.lower().endswith(tuple(self.listener.extension_filter)):
+                f"{path}{filename}",
+            ) and not filename.lower().endswith(
+                tuple(self.listener.extension_filter)
+            ):
                 self._download_file(file_id, path, filename, mime_type)
             if self.listener.is_cancelled:
                 break
@@ -97,11 +103,14 @@ class GoogleDriveDownload(GoogleDriveHelper):
     def _download_file(self, file_id, path, filename, mime_type, export=False):
         if export:
             request = self.service.files().export_media(
-                fileId=file_id, mimeType="application/pdf"
+                fileId=file_id,
+                mimeType="application/pdf",
             )
         else:
             request = self.service.files().get_media(
-                fileId=file_id, supportsAllDrives=True, acknowledgeAbuse=True
+                fileId=file_id,
+                supportsAllDrives=True,
+                acknowledgeAbuse=True,
             )
         filename = filename.replace("/", "")
         if export:
@@ -113,7 +122,7 @@ class GoogleDriveDownload(GoogleDriveHelper):
             if self.listener.name.endswith(ext):
                 self.listener.name = filename
         if self.listener.is_cancelled:
-            return
+            return None
         fh = FileIO(f"{path}/{filename}", "wb")
         downloader = MediaIoBaseDownload(fh, request, chunksize=50 * 1024 * 1024)
         done = False
@@ -135,7 +144,11 @@ class GoogleDriveDownload(GoogleDriveHelper):
                     )
                     if "fileNotDownloadable" in reason and "document" in mime_type:
                         return self._download_file(
-                            file_id, path, filename, mime_type, True
+                            file_id,
+                            path,
+                            filename,
+                            mime_type,
+                            True,
                         )
                     if reason not in [
                         "downloadQuotaExceeded",
@@ -145,18 +158,20 @@ class GoogleDriveDownload(GoogleDriveHelper):
                     if self.use_sa:
                         if self.sa_count >= self.sa_number:
                             LOGGER.info(
-                                f"Reached maximum number of service accounts switching, which is {self.sa_count}"
+                                f"Reached maximum number of service accounts switching, which is {self.sa_count}",
                             )
                             raise err
-                        else:
-                            if self.listener.is_cancelled:
-                                return
-                            self.switch_service_account()
-                            LOGGER.info(f"Got: {reason}, Trying Again...")
-                            return self._download_file(
-                                file_id, path, filename, mime_type
-                            )
-                    else:
-                        LOGGER.error(f"Got: {reason}")
-                        raise err
+                        if self.listener.is_cancelled:
+                            return None
+                        self.switch_service_account()
+                        LOGGER.info(f"Got: {reason}, Trying Again...")
+                        return self._download_file(
+                            file_id,
+                            path,
+                            filename,
+                            mime_type,
+                        )
+                    LOGGER.error(f"Got: {reason}")
+                    raise err
         self.file_processed_bytes = 0
+        return None

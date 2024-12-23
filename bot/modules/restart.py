@@ -1,16 +1,19 @@
-from sys import executable
-from aiofiles import open as aiopen
-from aiofiles.os import path as aiopath, remove
-from asyncio import gather, create_subprocess_exec
+import contextlib
+from asyncio import create_subprocess_exec, gather
 from os import execl as osexecl
+from sys import executable
 
-from .. import intervals, scheduler, sabnzbd_client, LOGGER
-from ..helper.ext_utils.bot_utils import new_task, sync_to_async
-from ..helper.telegram_helper.message_utils import send_message
-from ..helper.ext_utils.db_handler import database
-from ..helper.ext_utils.files_utils import clean_all
-from ..core.mltb_client import TgClient
-from ..core.config_manager import Config
+from aiofiles import open as aiopen
+from aiofiles.os import path as aiopath
+from aiofiles.os import remove
+
+from bot import LOGGER, intervals, sabnzbd_client, scheduler
+from bot.core.config_manager import Config
+from bot.core.mltb_client import TgClient
+from bot.helper.ext_utils.bot_utils import new_task, sync_to_async
+from bot.helper.ext_utils.db_handler import database
+from bot.helper.ext_utils.files_utils import clean_all
+from bot.helper.telegram_helper.message_utils import send_message
 
 
 @new_task
@@ -59,7 +62,9 @@ async def restart_notification():
         try:
             if msg.startswith("Restarted Successfully!"):
                 await TgClient.bot.edit_message_text(
-                    chat_id=chat_id, message_id=msg_id, text=msg
+                    chat_id=chat_id,
+                    message_id=msg_id,
+                    text=msg,
                 )
                 await remove(".restartmsg")
             else:
@@ -75,7 +80,9 @@ async def restart_notification():
     if Config.INCOMPLETE_TASK_NOTIFIER and Config.DATABASE_URL:
         if notifier_dict := await database.get_incomplete_tasks():
             for cid, data in notifier_dict.items():
-                msg = "Restarted Successfully!" if cid == chat_id else "Bot Restarted!"
+                msg = (
+                    "Restarted Successfully!" if cid == chat_id else "Bot Restarted!"
+                )
                 for tag, links in data.items():
                     msg += f"\n\n{tag}: "
                     for index, link in enumerate(links, start=1):
@@ -87,10 +94,10 @@ async def restart_notification():
                     await send_incomplete_task_message(cid, msg)
 
     if await aiopath.isfile(".restartmsg"):
-        try:
+        with contextlib.suppress(Exception):
             await TgClient.bot.edit_message_text(
-                chat_id=chat_id, message_id=msg_id, text="Restarted Successfully!"
+                chat_id=chat_id,
+                message_id=msg_id,
+                text="Restarted Successfully!",
             )
-        except:
-            pass
         await remove(".restartmsg")

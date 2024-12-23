@@ -1,21 +1,25 @@
-from time import time
-from re import search as research
 from asyncio import gather
+from re import search as research
+from time import time
+
 from aiofiles.os import path as aiopath
 from psutil import (
-    disk_usage,
-    cpu_percent,
-    swap_memory,
-    cpu_count,
-    virtual_memory,
-    net_io_counters,
     boot_time,
+    cpu_count,
+    cpu_percent,
+    disk_usage,
+    net_io_counters,
+    swap_memory,
+    virtual_memory,
 )
 
-from .. import bot_start_time
-from ..helper.ext_utils.status_utils import get_readable_file_size, get_readable_time
-from ..helper.ext_utils.bot_utils import cmd_exec, new_task
-from ..helper.telegram_helper.message_utils import send_message
+from bot import bot_start_time
+from bot.helper.ext_utils.bot_utils import cmd_exec, new_task
+from bot.helper.ext_utils.status_utils import (
+    get_readable_file_size,
+    get_readable_time,
+)
+from bot.helper.telegram_helper.message_utils import send_message
 
 commands = {
     "aria2": (["aria2c", "--version"], r"aria2 version ([\d.]+)"),
@@ -78,18 +82,21 @@ async def get_version_async(command, regex):
         match = research(regex, out)
         return match.group(1) if match else "Version not found"
     except Exception as e:
-        return f"Exception: {str(e)}"
+        return f"Exception: {e!s}"
 
 
 @new_task
 async def get_packages_version():
-    tasks = [get_version_async(command, regex) for command, regex in commands.values()]
+    tasks = [
+        get_version_async(command, regex) for command, regex in commands.values()
+    ]
     versions = await gather(*tasks)
-    for tool, version in zip(commands.keys(), versions):
+    for tool, version in zip(commands.keys(), versions, strict=False):
         commands[tool] = version
     if await aiopath.exists(".git"):
         last_commit = await cmd_exec(
-            "git log -1 --date=short --pretty=format:'%cd <b>From</b> %cr'", True
+            "git log -1 --date=short --pretty=format:'%cd <b>From</b> %cr'",
+            True,
         )
         last_commit = last_commit[0]
     else:

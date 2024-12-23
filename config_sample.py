@@ -55,7 +55,7 @@ USENET_SERVERS = [
         "retention": 0,
         "send_group": 0,
         "priority": 0,
-    }
+    },
 ]
 # Update
 UPSTREAM_REPO = ""

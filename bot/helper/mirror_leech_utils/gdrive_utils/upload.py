@@ -1,19 +1,22 @@
+import contextlib
+from logging import getLogger
+from os import listdir, remove
+from os import path as ospath
+
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload
-from logging import getLogger
-from os import path as ospath, listdir, remove
 from tenacity import (
-    retry,
-    wait_exponential,
-    stop_after_attempt,
-    retry_if_exception_type,
     RetryError,
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
 )
 
-from ....core.config_manager import Config
-from ...ext_utils.bot_utils import async_to_sync, SetInterval
-from ...ext_utils.files_utils import get_mime_type
-from ...mirror_leech_utils.gdrive_utils.helper import GoogleDriveHelper
+from bot.core.config_manager import Config
+from bot.helper.ext_utils.bot_utils import SetInterval, async_to_sync
+from bot.helper.ext_utils.files_utils import get_mime_type
+from bot.helper.mirror_leech_utils.gdrive_utils.helper import GoogleDriveHelper
 
 LOGGER = getLogger(__name__)
 
@@ -46,9 +49,11 @@ class GoogleDriveUpload(GoogleDriveHelper):
         self._updater = SetInterval(self.update_interval, self.progress)
         try:
             if ospath.isfile(self._path):
-                if self._path.lower().endswith(tuple(self.listener.extension_filter)):
+                if self._path.lower().endswith(
+                    tuple(self.listener.extension_filter)
+                ):
                     raise Exception(
-                        "This file extension is excluded by extension filter!"
+                        "This file extension is excluded by extension filter!",
                     )
                 mime_type = get_mime_type(self._path)
                 link = self._upload_file(
@@ -70,7 +75,9 @@ class GoogleDriveUpload(GoogleDriveHelper):
                     ospath.basename(ospath.abspath(self.listener.name)),
                     self.listener.up_dest,
                 )
-                result = self._upload_dir(self._path, dir_id, unwanted_files, ft_delete)
+                result = self._upload_dir(
+                    self._path, dir_id, unwanted_files, ft_delete
+                )
                 if result is None:
                     raise Exception("Upload has been manually cancelled!")
                 link = self.G_DRIVE_DIR_BASE_DOWNLOAD_URL.format(dir_id)
@@ -90,10 +97,11 @@ class GoogleDriveUpload(GoogleDriveHelper):
                 if mime_type == "Folder":
                     LOGGER.info("Deleting uploaded data from Drive...")
                     self.service.files().delete(
-                        fileId=dir_id, supportsAllDrives=True
+                        fileId=dir_id,
+                        supportsAllDrives=True,
                     ).execute()
                 return
-            elif self._is_errored:
+            if self._is_errored:
                 return
             async_to_sync(
                 self.listener.on_upload_complete,
@@ -114,16 +122,26 @@ class GoogleDriveUpload(GoogleDriveHelper):
             if ospath.isdir(current_file_name):
                 current_dir_id = self.create_directory(item, dest_id)
                 new_id = self._upload_dir(
-                    current_file_name, current_dir_id, unwanted_files, ft_delete
+                    current_file_name,
+                    current_dir_id,
+                    unwanted_files,
+                    ft_delete,
                 )
                 self.total_folders += 1
-            elif current_file_name not in unwanted_files and not item.lower().endswith(
-                tuple(self.listener.extension_filter)
+            elif (
+                current_file_name not in unwanted_files
+                and not item.lower().endswith(
+                    tuple(self.listener.extension_filter),
+                )
             ):
                 mime_type = get_mime_type(current_file_name)
                 file_name = current_file_name.split("/")[-1]
                 self._upload_file(
-                    current_file_name, file_name, mime_type, dest_id, ft_delete
+                    current_file_name,
+                    file_name,
+                    mime_type,
+                    dest_id,
+                    ft_delete,
                 )
                 self.total_files += 1
                 new_id = dest_id
@@ -141,7 +159,13 @@ class GoogleDriveUpload(GoogleDriveHelper):
         retry=(retry_if_exception_type(Exception)),
     )
     def _upload_file(
-        self, file_path, file_name, mime_type, dest_id, ft_delete, in_dir=True
+        self,
+        file_path,
+        file_name,
+        mime_type,
+        dest_id,
+        ft_delete,
+        in_dir=True,
     ):
         # File body description
         file_metadata = {
@@ -153,11 +177,15 @@ class GoogleDriveUpload(GoogleDriveHelper):
             file_metadata["parents"] = [dest_id]
 
         if ospath.getsize(file_path) == 0:
-            media_body = MediaFileUpload(file_path, mimetype=mime_type, resumable=False)
+            media_body = MediaFileUpload(
+                file_path, mimetype=mime_type, resumable=False
+            )
             response = (
                 self.service.files()
                 .create(
-                    body=file_metadata, media_body=media_body, supportsAllDrives=True
+                    body=file_metadata,
+                    media_body=media_body,
+                    supportsAllDrives=True,
                 )
                 .execute()
             )
@@ -171,12 +199,17 @@ class GoogleDriveUpload(GoogleDriveHelper):
             )
             return self.G_DRIVE_BASE_DOWNLOAD_URL.format(drive_file.get("id"))
         media_body = MediaFileUpload(
-            file_path, mimetype=mime_type, resumable=True, chunksize=100 * 1024 * 1024
+            file_path,
+            mimetype=mime_type,
+            resumable=True,
+            chunksize=100 * 1024 * 1024,
         )
 
         # Insert a file
         drive_file = self.service.files().create(
-            body=file_metadata, media_body=media_body, supportsAllDrives=True
+            body=file_metadata,
+            media_body=media_body,
+            supportsAllDrives=True,
         )
         response = None
         retries = 0
@@ -199,32 +232,28 @@ class GoogleDriveUpload(GoogleDriveHelper):
                     if self.use_sa:
                         if self.sa_count >= self.sa_number:
                             LOGGER.info(
-                                f"Reached maximum number of service accounts switching, which is {self.sa_count}"
+                                f"Reached maximum number of service accounts switching, which is {self.sa_count}",
                             )
                             raise err
-                        else:
-                            if self.listener.is_cancelled:
-                                return
-                            self.switch_service_account()
-                            LOGGER.info(f"Got: {reason}, Trying Again.")
-                            return self._upload_file(
-                                file_path,
-                                file_name,
-                                mime_type,
-                                dest_id,
-                                ft_delete,
-                                in_dir,
-                            )
-                    else:
-                        LOGGER.error(f"Got: {reason}")
-                        raise err
+                        if self.listener.is_cancelled:
+                            return None
+                        self.switch_service_account()
+                        LOGGER.info(f"Got: {reason}, Trying Again.")
+                        return self._upload_file(
+                            file_path,
+                            file_name,
+                            mime_type,
+                            dest_id,
+                            ft_delete,
+                            in_dir,
+                        )
+                    LOGGER.error(f"Got: {reason}")
+                    raise err
         if self.listener.is_cancelled:
-            return
+            return None
         if not self.listener.seed or self.listener.new_dir or file_path in ft_delete:
-            try:
+            with contextlib.suppress(Exception):
                 remove(file_path)
-            except:
-                pass
         self.file_processed_bytes = 0
         # Insert new permissions
         if not Config.IS_TEAM_DRIVE:
@@ -237,4 +266,4 @@ class GoogleDriveUpload(GoogleDriveHelper):
                 .execute()
             )
             return self.G_DRIVE_BASE_DOWNLOAD_URL.format(drive_file.get("id"))
-        return
+        return None

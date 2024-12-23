@@ -1,9 +1,9 @@
 from asyncio import sleep
 
-from ... import intervals, jd_lock, jd_downloads
-from ..ext_utils.bot_utils import new_task
-from ..ext_utils.jdownloader_booter import jdownloader
-from ..ext_utils.status_utils import get_task_by_gid
+from bot import intervals, jd_downloads, jd_lock
+from bot.helper.ext_utils.bot_utils import new_task
+from bot.helper.ext_utils.jdownloader_booter import jdownloader
+from bot.helper.ext_utils.status_utils import get_task_by_gid
 
 
 @new_task
@@ -11,7 +11,7 @@ async def remove_download(gid):
     if intervals["stopAll"]:
         return
     await jdownloader.device.downloads.remove_links(
-        package_ids=jd_downloads[gid]["ids"]
+        package_ids=jd_downloads[gid]["ids"],
     )
     if task := await get_task_by_gid(gid):
         await task.listener.on_download_error("Download removed manually!")
@@ -51,7 +51,7 @@ async def _jd_listener():
                 break
             try:
                 packages = await jdownloader.device.downloads.query_packages(
-                    [{"finished": True, "saveTo": True}]
+                    [{"finished": True, "saveTo": True}],
                 )
             except:
                 continue

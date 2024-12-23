@@ -5,13 +5,14 @@ import sys
 from argparse import ArgumentParser
 from base64 import b64decode
 from glob import glob
+from json import loads
+from random import choice
+from time import sleep
+
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from json import loads
-from random import choice
-from time import sleep
 
 SCOPES = [
     "https://www.googleapis.com/auth/drive",
@@ -37,7 +38,7 @@ def _create_accounts(service, project, count):
                     "accountId": aid,
                     "serviceAccount": {"displayName": aid},
                 },
-            )
+            ),
         )
     batch.execute()
 
@@ -95,7 +96,7 @@ def _create_projects(cloud, count):
     for i in project_create_ops:
         while True:
             resp = cloud.operations().get(name=i).execute()
-            if "done" in resp and resp["done"]:
+            if resp.get("done"):
                 break
             sleep(3)
     return new_projs
@@ -118,7 +119,7 @@ def _list_sas(iam, project):
         .list(name=f"projects/{project}", pageSize=100)
         .execute()
     )
-    return resp["accounts"] if "accounts" in resp else []
+    return resp.get("accounts", [])
 
 
 # Create Keys Batch Handler
@@ -134,7 +135,7 @@ def _batch_keys_resp(id, resp, exception):
             (
                 resp["name"][resp["name"].rfind("/") :],
                 b64decode(resp["privateKeyData"]).decode("utf-8"),
-            )
+            ),
         )
 
 
@@ -158,7 +159,7 @@ def _create_sa_keys(iam, projects, path):
                             "privateKeyType": "TYPE_GOOGLE_CREDENTIALS_FILE",
                             "keyAlgorithm": "KEY_ALG_RSA_2048",
                         },
-                    )
+                    ),
                 )
             batch.execute()
             if current_key_dump is None:
@@ -188,13 +189,15 @@ def serviceaccountfactory(
     create_projects=None,
     max_projects=12,
     enable_services=None,
-    services=["iam", "drive"],
+    services=None,
     create_sas=None,
     delete_sas=None,
     download_keys=None,
 ):
+    if services is None:
+        services = ["iam", "drive"]
     selected_projects = []
-    proj_id = loads(open(credentials, "r").read())["installed"]["project_id"]
+    proj_id = loads(open(credentials).read())["installed"]["project_id"]
     creds = None
     if os.path.exists(token):
         with open(token, "rb") as t:
@@ -225,7 +228,7 @@ def serviceaccountfactory(
             ):
                 try:
                     serviceusage.services().enable(
-                        name=f"projects/{proj_id}/services/cloudresourcemanager.googleapis.com"
+                        name=f"projects/{proj_id}/services/cloudresourcemanager.googleapis.com",
                     ).execute()
                 except HttpError as e:
                     print(e._get_reason())
@@ -248,12 +251,12 @@ def serviceaccountfactory(
                     "Please reduce value of --quick-setup.\n"
                     "Remember that you can totally create %d projects (%d already).\n"
                     "Please do not delete existing projects unless you know what you are doing"
-                    % (create_projects, max_projects, current_count)
+                    % (create_projects, max_projects, current_count),
                 )
         else:
             print(
                 "Will overwrite all service accounts in existing projects.\n"
-                "So make sure you have some projects already."
+                "So make sure you have some projects already.",
             )
             input("Press Enter to continue...")
 
@@ -296,6 +299,8 @@ def serviceaccountfactory(
         for i in std:
             print(f"Deleting service accounts in {i}")
             _delete_sas(iam, i)
+        return None
+    return None
 
 
 if __name__ == "__main__":
@@ -307,7 +312,9 @@ if __name__ == "__main__":
         help="Specify an alternate directory to output the credential files.",
     )
     parse.add_argument(
-        "--token", default="token_sa.pickle", help="Specify the pickle token file path."
+        "--token",
+        default="token_sa.pickle",
+        help="Specify the pickle token file path.",
     )
     parse.add_argument(
         "--credentials",
@@ -321,10 +328,15 @@ if __name__ == "__main__":
         help="List projects viewable by the user.",
     )
     parse.add_argument(
-        "--list-sas", default=False, help="List service accounts in a project."
+        "--list-sas",
+        default=False,
+        help="List service accounts in a project.",
     )
     parse.add_argument(
-        "--create-projects", type=int, default=None, help="Creates up to N projects."
+        "--create-projects",
+        type=int,
+        default=None,
+        help="Creates up to N projects.",
     )
     parse.add_argument(
         "--max-projects",
@@ -344,10 +356,14 @@ if __name__ == "__main__":
         help="Specify a different set of services to enable. Overrides the default.",
     )
     parse.add_argument(
-        "--create-sas", default=None, help="Create service accounts in a project."
+        "--create-sas",
+        default=None,
+        help="Create service accounts in a project.",
     )
     parse.add_argument(
-        "--delete-sas", default=None, help="Delete service accounts in a project."
+        "--delete-sas",
+        default=None,
+        help="Delete service accounts in a project.",
     )
     parse.add_argument(
         "--download-keys",
@@ -371,15 +387,17 @@ if __name__ == "__main__":
     if not os.path.exists(args.credentials):
         options = glob("*.json")
         print(
-            "No credentials found at %s. Please enable the Drive API in:\n"
+            f"No credentials found at {args.credentials}. Please enable the Drive API in:\n"
             "https://developers.google.com/drive/api/v3/quickstart/python\n"
-            "and save the json file as credentials.json" % args.credentials
+            "and save the json file as credentials.json",
         )
         if not options:
-            exit(-1)
+            sys.exit(-1)
         else:
             print("Select a credentials file below.")
-            inp_options = [str(i) for i in list(range(1, len(options) + 1))] + options
+            inp_options = [
+                str(i) for i in list(range(1, len(options) + 1))
+            ] + options
             for i in range(len(options)):
                 print("  %d) %s" % (i + 1, options[i]))
             inp = None
@@ -389,7 +407,7 @@ if __name__ == "__main__":
                     break
             args.credentials = inp if inp in options else options[int(inp) - 1]
             print(
-                f"Use --credentials {args.credentials} next time to use this credentials file."
+                f"Use --credentials {args.credentials} next time to use this credentials file.",
             )
     if args.quick_setup:
         opt = "~" if args.new_only else "*"

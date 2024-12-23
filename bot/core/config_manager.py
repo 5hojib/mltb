@@ -77,7 +77,7 @@ class Config:
     def get_all(cls):
         return {
             key: getattr(cls, key)
-            for key in cls.__dict__.keys()
+            for key in cls.__dict__
             if not key.startswith("__") and not callable(getattr(cls, key))
         }
 

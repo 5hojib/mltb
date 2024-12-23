@@ -1,14 +1,16 @@
-from aiofiles.os import path, makedirs, listdir, rename
-from aioshutil import rmtree
 from json import dump
 from random import randint
 from re import match
 
-from ... import LOGGER
-from ...core.mltb_client import TgClient
-from ...core.config_manager import Config
-from .bot_utils import cmd_exec, new_task
+from aiofiles.os import listdir, makedirs, path, rename
+from aioshutil import rmtree
+
+from bot import LOGGER
+from bot.core.config_manager import Config
+from bot.core.mltb_client import TgClient
 from myjd import MyJdApi
+
+from .bot_utils import cmd_exec, new_task
 
 
 class JDownloader(MyJdApi):
@@ -31,11 +33,11 @@ class JDownloader(MyJdApi):
         self._device_name = f"{randint(0, 1000)}@{TgClient.NAME}"
         if await path.exists("/JDownloader/logs"):
             LOGGER.info(
-                "Starting JDownloader... This might take up to 10 sec and might restart once if update available!"
+                "Starting JDownloader... This might take up to 10 sec and might restart once if update available!",
             )
         else:
             LOGGER.info(
-                "Starting JDownloader... This might take up to 8 sec and might restart once after build!"
+                "Starting JDownloader... This might take up to 8 sec and might restart once after build!",
             )
         jdata = {
             "autoconnectenabledv2": True,
@@ -75,7 +77,8 @@ class JDownloader(MyJdApi):
             for filename in await listdir("/JDownloader"):
                 if match(pattern, filename):
                     await rename(
-                        f"/JDownloader/{filename}", "/JDownloader/JDownloader.jar"
+                        f"/JDownloader/{filename}",
+                        "/JDownloader/JDownloader.jar",
                     )
                     break
             await rmtree("/JDownloader/update")

@@ -1,7 +1,7 @@
 from pyrogram.filters import create
 
-from ... import user_data
-from ...core.config_manager import Config
+from bot import user_data
+from bot.core.config_manager import Config
 
 
 class CustomFilters:
@@ -33,7 +33,7 @@ class CustomFilters:
                     thread_id is None
                     or thread_id in user_data[chat_id].get("thread_ids", [])
                 )
-            )
+            ),
         )
 
     authorized = create(authorized_user)
@@ -42,7 +42,8 @@ class CustomFilters:
         user = update.from_user or update.sender_chat
         uid = user.id
         return bool(
-            uid == Config.OWNER_ID or uid in user_data and user_data[uid].get("is_sudo")
+            uid == Config.OWNER_ID
+            or (uid in user_data and user_data[uid].get("is_sudo")),
         )
 
     sudo = create(sudo_user)

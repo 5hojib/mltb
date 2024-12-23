@@ -1,24 +1,27 @@
-from aiofiles.os import path as aiopath, remove, makedirs
-from aiofiles import open as aiopen
-from aioshutil import rmtree
 from asyncio import create_subprocess_exec, create_subprocess_shell
 
-from .. import (
+from aiofiles import open as aiopen
+from aiofiles.os import makedirs, remove
+from aiofiles.os import path as aiopath
+from aioshutil import rmtree
+
+from bot import (
+    LOGGER,
+    aria2,
     aria2_options,
-    qbit_options,
-    nzb_options,
     drives_ids,
     drives_names,
-    index_urls,
-    user_data,
     extension_filter,
-    LOGGER,
-    rss_dict,
+    index_urls,
+    nzb_options,
+    qbit_options,
     qbittorrent_client,
+    rss_dict,
     sabnzbd_client,
-    aria2,
+    user_data,
 )
-from ..helper.ext_utils.db_handler import database
+from bot.helper.ext_utils.db_handler import database
+
 from .config_manager import Config
 from .mltb_client import TgClient
 
@@ -55,26 +58,34 @@ async def load_settings():
     if database.db is not None:
         BOT_ID = Config.BOT_TOKEN.split(":", 1)[0]
         config_file = Config.get_all()
-        old_config = await database.db.settings.deployConfig.find_one({"_id": BOT_ID})
+        old_config = await database.db.settings.deployConfig.find_one(
+            {"_id": BOT_ID}
+        )
         if old_config is None:
             database.db.settings.deployConfig.replace_one(
-                {"_id": BOT_ID}, config_file, upsert=True
+                {"_id": BOT_ID},
+                config_file,
+                upsert=True,
             )
         else:
             del old_config["_id"]
         if old_config and old_config != config_file:
             await database.db.settings.deployConfig.replace_one(
-                {"_id": BOT_ID}, config_file, upsert=True
+                {"_id": BOT_ID},
+                config_file,
+                upsert=True,
             )
         else:
             config_dict = await database.db.settings.config.find_one(
-                {"_id": BOT_ID}, {"_id": 0}
+                {"_id": BOT_ID},
+                {"_id": 0},
             )
             if config_dict:
                 Config.load_dict(config_dict)
 
         if pf_dict := await database.db.settings.files.find_one(
-            {"_id": BOT_ID}, {"_id": 0}
+            {"_id": BOT_ID},
+            {"_id": 0},
         ):
             for key, value in pf_dict.items():
                 if value:
@@ -83,17 +94,20 @@ async def load_settings():
                         await f.write(value)
 
         if a2c_options := await database.db.settings.aria2c.find_one(
-            {"_id": BOT_ID}, {"_id": 0}
+            {"_id": BOT_ID},
+            {"_id": 0},
         ):
             aria2_options.update(a2c_options)
 
         if qbit_opt := await database.db.settings.qbittorrent.find_one(
-            {"_id": BOT_ID}, {"_id": 0}
+            {"_id": BOT_ID},
+            {"_id": 0},
         ):
             qbit_options.update(qbit_opt)
 
         if nzb_opt := await database.db.settings.nzb.find_one(
-            {"_id": BOT_ID}, {"_id": 0}
+            {"_id": BOT_ID},
+            {"_id": 0},
         ):
             if await aiopath.exists("sabnzbd/SABnzbd.ini.bak"):
                 await remove("sabnzbd/SABnzbd.ini.bak")
@@ -145,11 +159,15 @@ async def save_settings():
         return
     config_dict = Config.get_all()
     await database.db.settings.config.replace_one(
-        {"_id": TgClient.ID}, config_dict, upsert=True
+        {"_id": TgClient.ID},
+        config_dict,
+        upsert=True,
     )
     if await database.db.settings.aria2c.find_one({"_id": TgClient.ID}) is None:
         await database.db.settings.aria2c.update_one(
-            {"_id": TgClient.ID}, {"$set": aria2_options}, upsert=True
+            {"_id": TgClient.ID},
+            {"$set": aria2_options},
+            upsert=True,
         )
     if await database.db.settings.qbittorrent.find_one({"_id": TgClient.ID}) is None:
         await database.save_qbit_settings()
@@ -157,20 +175,23 @@ async def save_settings():
         async with aiopen("sabnzbd/SABnzbd.ini", "rb+") as pf:
             nzb_conf = await pf.read()
         await database.db.settings.nzb.update_one(
-            {"_id": TgClient.ID}, {"$set": {"SABnzbd__ini": nzb_conf}}, upsert=True
+            {"_id": TgClient.ID},
+            {"$set": {"SABnzbd__ini": nzb_conf}},
+            upsert=True,
         )
 
 
 async def update_variables():
     if (
         Config.LEECH_SPLIT_SIZE > TgClient.MAX_SPLIT_SIZE
-        or Config.LEECH_SPLIT_SIZE == 2097152000 or not Config.LEECH_SPLIT_SIZE
+        or Config.LEECH_SPLIT_SIZE == 2097152000
+        or not Config.LEECH_SPLIT_SIZE
     ):
         Config.LEECH_SPLIT_SIZE = TgClient.MAX_SPLIT_SIZE
 
     Config.MIXED_LEECH = bool(Config.MIXED_LEECH and TgClient.IS_PREMIUM_USER)
     Config.USER_TRANSMISSION = bool(
-        Config.USER_TRANSMISSION and TgClient.IS_PREMIUM_USER
+        Config.USER_TRANSMISSION and TgClient.IS_PREMIUM_USER,
     )
 
     if Config.AUTHORIZED_CHATS:
@@ -179,7 +200,7 @@ async def update_variables():
             chat_id, *thread_ids = id_.split("|")
             chat_id = int(chat_id.strip())
             if thread_ids:
-                thread_ids = list(map(lambda x: int(x.strip()), thread_ids))
+                thread_ids = [int(x.strip()) for x in thread_ids]
                 user_data[chat_id] = {"is_auth": True, "thread_ids": thread_ids}
             else:
                 user_data[chat_id] = {"is_auth": True}
@@ -217,20 +238,19 @@ async def update_variables():
 
 
 async def load_configurations():
-
     if not await aiopath.exists(".netrc"):
         async with aiopen(".netrc", "w"):
             pass
 
     await (
         await create_subprocess_shell(
-            "chmod 600 .netrc && cp .netrc /root/.netrc && chmod +x aria-nox-nzb.sh && ./aria-nox-nzb.sh"
+            "chmod 600 .netrc && cp .netrc /root/.netrc && chmod +x aria-nox-nzb.sh && ./aria-nox-nzb.sh",
         )
     ).wait()
 
     if Config.BASE_URL:
         await create_subprocess_shell(
-            f"gunicorn web.wserver:app --bind 0.0.0.0:{Config.BASE_URL_PORT} --worker-class gevent"
+            f"gunicorn web.wserver:app --bind 0.0.0.0:{Config.BASE_URL_PORT} --worker-class gevent",
         )
 
     if await aiopath.exists("cfg.zip"):
@@ -246,7 +266,12 @@ async def load_configurations():
             await rmtree("accounts")
         await (
             await create_subprocess_exec(
-                "7z", "x", "-o.", "-aoa", "accounts.zip", "accounts/*.json"
+                "7z",
+                "x",
+                "-o.",
+                "-aoa",
+                "accounts.zip",
+                "accounts/*.json",
             )
         ).wait()
         await (await create_subprocess_exec("chmod", "-R", "777", "accounts")).wait()

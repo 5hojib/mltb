@@ -2,7 +2,6 @@ from sabnzbdapi.bound_methods import SubFunctions
 
 
 class JobFunctions(SubFunctions):
-
     async def add_uri(
         self,
         url: str = "",
@@ -10,11 +9,10 @@ class JobFunctions(SubFunctions):
         nzbname: str = "",
         password: str = "",
         cat: str = "*",
-        script: list = None,
+        script: list | None = None,
         priority: int = 0,
         pp: int = 1,
     ):
-
         'return {"status": True, "nzo_ids": ["SABnzbd_nzo_kyt1f0"]}'
 
         if file:
@@ -34,7 +32,7 @@ class JobFunctions(SubFunctions):
                 "script": script,
                 "priority": priority,
                 "pp": pp,
-            }
+            },
         )
 
     async def get_downloads(
@@ -169,7 +167,7 @@ class JobFunctions(SubFunctions):
                 "name": "delete",
                 "value": nzo_id if isinstance(nzo_id, str) else ",".join(nzo_id),
                 "del_files": 1 if delete_files else 0,
-            }
+            },
         )
 
     async def pause_all(self):
@@ -183,7 +181,11 @@ class JobFunctions(SubFunctions):
     async def purge_all(self, delete_files: bool = False):
         """return {"status": True, "nzo_ids": ["all effected ids"]}"""
         return await self.call(
-            {"mode": "queue", "name": "purge", "del_files": 1 if delete_files else 0}
+            {
+                "mode": "queue",
+                "name": "purge",
+                "del_files": 1 if delete_files else 0,
+            },
         )
 
     async def get_files(self, nzo_id: str):
@@ -211,8 +213,10 @@ class JobFunctions(SubFunctions):
                 "mode": "queue",
                 "name": "delete_nzf",
                 "value": nzo_id,
-                "value2": file_ids if isinstance(file_ids, str) else ",".join(file_ids),
-            }
+                "value2": file_ids
+                if isinstance(file_ids, str)
+                else ",".join(file_ids),
+            },
         )  # return nzf_ids of removed file idk how yet
 
     async def get_history(
@@ -391,14 +395,19 @@ class JobFunctions(SubFunctions):
 
     async def retry_item(self, nzo_id: str, password: str = ""):
         """return {"status": True}"""
-        return await self.call({"mode": "retry", "value": nzo_id, "password": password})
+        return await self.call(
+            {"mode": "retry", "value": nzo_id, "password": password}
+        )
 
     async def retry_all(self):
         """return {"status": True}"""
         return await self.call({"mode": "retry_all"})
 
     async def delete_history(
-        self, nzo_ids: str | list[str], archive: int = 0, delete_files: bool = False
+        self,
+        nzo_ids: str | list[str],
+        archive: int = 0,
+        delete_files: bool = False,
     ):
         """return {"status": True}"""
         return await self.call(
@@ -408,31 +417,37 @@ class JobFunctions(SubFunctions):
                 "value": nzo_ids if isinstance(nzo_ids, str) else ",".join(nzo_ids),
                 "archive": archive,
                 "del_files": 1 if delete_files else 0,
-            }
+            },
         )
 
     async def change_job_pp(self, nzo_id: str, pp: int):
         """return {"status": True}"""
-        return await self.call({"mode": "change_opts", "value": nzo_id, "value2": pp})
+        return await self.call(
+            {"mode": "change_opts", "value": nzo_id, "value2": pp}
+        )
 
     async def set_speedlimit(self, limit: str | int):
         """return {"status": True}"""
-        return await self.call({"mode": "config", "name": "speedlimit", "value": limit})
+        return await self.call(
+            {"mode": "config", "name": "speedlimit", "value": limit}
+        )
 
     async def delete_config(self, section: str, keyword: str):
         """return {"status": True}"""
         return await self.call(
-            {"mode": "del_config", "section": section, "keyword": keyword}
+            {"mode": "del_config", "section": section, "keyword": keyword},
         )
 
     async def set_config_default(self, keyword: str | list[str]):
         """return {"status": True}"""
         return await self.call({"mode": "set_config_default", "keyword": keyword})
 
-    async def get_config(self, section: str = None, keyword: str = None):
+    async def get_config(
+        self, section: str | None = None, keyword: str | None = None
+    ):
         """return config as dic"""
         return await self.call(
-            {"mode": "get_config", "section": section, "keyword": keyword}
+            {"mode": "get_config", "section": section, "keyword": keyword},
         )
 
     async def set_config(self, section: str, keyword: str, value: str):
@@ -443,7 +458,7 @@ class JobFunctions(SubFunctions):
                 "section": section,
                 "keyword": keyword,
                 "value": value,
-            }
+            },
         )
 
     async def set_special_config(self, section: str, items: dict):
@@ -453,7 +468,7 @@ class JobFunctions(SubFunctions):
                 "mode": "set_config",
                 "section": section,
                 **items,
-            }
+            },
         )
 
     async def server_stats(self):

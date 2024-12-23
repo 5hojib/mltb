@@ -108,7 +108,8 @@ def make_tree(res, tool=False, root_path=""):
                         previous_node = current_node
                 try:
                     progress = round(
-                        (int(i["completedLength"]) / int(i["length"])) * 100, 5
+                        (int(i["completedLength"]) / int(i["length"])) * 100,
+                        5,
                     )
                 except:
                     progress = 0
@@ -124,7 +125,8 @@ def make_tree(res, tool=False, root_path=""):
             else:
                 try:
                     progress = round(
-                        (int(i["completedLength"]) / int(i["length"])) * 100, 5
+                        (int(i["completedLength"]) / int(i["length"])) * 100,
+                        5,
                     )
                 except:
                     progress = 0
@@ -163,7 +165,7 @@ def create_list(parent, contents=None):
                     "name": i.name,
                     "type": "folder",
                     "children": children,
-                }
+                },
             )
         else:
             contents.append(
@@ -174,7 +176,7 @@ def create_list(parent, contents=None):
                     "type": "file",
                     "selected": bool(i.priority),
                     "progress": i.progress,
-                }
+                },
             )
     return contents
 

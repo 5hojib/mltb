@@ -1,55 +1,54 @@
-from aiofiles import open as aiopen
-from aiofiles.os import remove, rename, path as aiopath
-from aioshutil import rmtree
 from asyncio import (
     create_subprocess_exec,
     create_subprocess_shell,
-    sleep,
     gather,
+    sleep,
 )
 from functools import partial
 from io import BytesIO
 from os import getcwd
-from pyrogram.filters import create
-from pyrogram.handlers import MessageHandler
 from time import time
 
-from .. import (
+from aiofiles import open as aiopen
+from aiofiles.os import path as aiopath
+from aiofiles.os import remove, rename
+from aioshutil import rmtree
+from pyrogram.filters import create
+from pyrogram.handlers import MessageHandler
+
+from bot import (
     LOGGER,
+    aria2,
+    aria2_options,
     drives_ids,
     drives_names,
+    extension_filter,
     index_urls,
-    aria2,
     intervals,
-    aria2_options,
-    task_dict,
+    jd_lock,
+    nzb_options,
     qbit_options,
     qbittorrent_client,
     sabnzbd_client,
-    nzb_options,
-    jd_lock,
-    extension_filter,
+    task_dict,
 )
-from ..helper.ext_utils.bot_utils import (
-    SetInterval,
-    sync_to_async,
-    new_task,
-)
-from ..core.config_manager import Config
-from ..core.mltb_client import TgClient
-from ..core.startup import update_qb_options, update_nzb_options, update_variables
-from ..helper.ext_utils.db_handler import database
-from ..helper.ext_utils.jdownloader_booter import jdownloader
-from ..helper.ext_utils.task_manager import start_from_queued
-from ..helper.mirror_leech_utils.rclone_utils.serve import rclone_serve_booter
-from ..helper.telegram_helper.button_build import ButtonMaker
-from ..helper.telegram_helper.message_utils import (
-    send_message,
-    send_file,
-    edit_message,
-    update_status_message,
+from bot.core.config_manager import Config
+from bot.core.mltb_client import TgClient
+from bot.core.startup import update_nzb_options, update_qb_options, update_variables
+from bot.helper.ext_utils.bot_utils import SetInterval, new_task, sync_to_async
+from bot.helper.ext_utils.db_handler import database
+from bot.helper.ext_utils.jdownloader_booter import jdownloader
+from bot.helper.ext_utils.task_manager import start_from_queued
+from bot.helper.mirror_leech_utils.rclone_utils.serve import rclone_serve_booter
+from bot.helper.telegram_helper.button_build import ButtonMaker
+from bot.helper.telegram_helper.message_utils import (
     delete_message,
+    edit_message,
+    send_file,
+    send_message,
+    update_status_message,
 )
+
 from .rss import add_job
 from .search import initiate_search_tools
 
@@ -160,7 +159,9 @@ async def get_buttons(key=None, edit_type=None):
         buttons.data_button("Close", "botset close")
         for x in range(0, len(conf_dict), 10):
             buttons.data_button(
-                f"{int(x / 10)}", f"botset start var {x}", position="footer"
+                f"{int(x / 10)}",
+                f"botset start var {x}",
+                position="footer",
             )
         msg = f"Config Variables | Page: {int(start / 10)} | State: {state}"
     elif key == "private":
@@ -182,7 +183,9 @@ Timeout: 60 sec"""
         buttons.data_button("Close", "botset close")
         for x in range(0, len(aria2_options), 10):
             buttons.data_button(
-                f"{int(x / 10)}", f"botset start aria {x}", position="footer"
+                f"{int(x / 10)}",
+                f"botset start aria {x}",
+                position="footer",
             )
         msg = f"Aria2c Options | Page: {int(start / 10)} | State: {state}"
     elif key == "qbit":
@@ -197,7 +200,9 @@ Timeout: 60 sec"""
         buttons.data_button("Close", "botset close")
         for x in range(0, len(qbit_options), 10):
             buttons.data_button(
-                f"{int(x / 10)}", f"botset start qbit {x}", position="footer"
+                f"{int(x / 10)}",
+                f"botset start qbit {x}",
+                position="footer",
             )
         msg = f"Qbittorrent Options | Page: {int(start / 10)} | State: {state}"
     elif key == "nzb":
@@ -213,7 +218,9 @@ Timeout: 60 sec"""
         buttons.data_button("Close", "botset close")
         for x in range(0, len(nzb_options), 10):
             buttons.data_button(
-                f"{int(x / 10)}", f"botset start nzb {x}", position="footer"
+                f"{int(x / 10)}",
+                f"botset start nzb {x}",
+                position="footer",
             )
         msg = f"Sabnzbd Options | Page: {int(start / 10)} | State: {state}"
     elif key == "nzbserver":
@@ -226,7 +233,9 @@ Timeout: 60 sec"""
         if len(Config.USENET_SERVERS) > 10:
             for x in range(0, len(Config.USENET_SERVERS), 10):
                 buttons.data_button(
-                    f"{int(x / 10)}", f"botset start nzbser {x}", position="footer"
+                    f"{int(x / 10)}",
+                    f"botset start nzbser {x}",
+                    position="footer",
                 )
         msg = f"Usenet Servers | Page: {int(start / 10)} | State: {state}"
     elif key.startswith("nzbser"):
@@ -243,7 +252,9 @@ Timeout: 60 sec"""
         if len(Config.USENET_SERVERS[index].keys()) > 10:
             for x in range(0, len(Config.USENET_SERVERS[index]), 10):
                 buttons.data_button(
-                    f"{int(x / 10)}", f"botset start {key} {x}", position="footer"
+                    f"{int(x / 10)}",
+                    f"botset start {key} {x}",
+                    position="footer",
                 )
         msg = f"Server Keys | Page: {int(start / 10)} | State: {state}"
 
@@ -275,7 +286,9 @@ async def edit_variable(_, message, pre_message, key):
             for cid, intvl in list(st.items()):
                 intvl.cancel()
                 intervals["status"][cid] = SetInterval(
-                    value, update_status_message, cid
+                    value,
+                    update_status_message,
+                    cid,
                 )
     elif key == "TORRENT_TIMEOUT":
         value = int(value)
@@ -296,9 +309,11 @@ async def edit_variable(_, message, pre_message, key):
     elif key == "BASE_URL_PORT":
         value = int(value)
         if Config.BASE_URL:
-            await (await create_subprocess_exec("pkill", "-9", "-f", "gunicorn")).wait()
+            await (
+                await create_subprocess_exec("pkill", "-9", "-f", "gunicorn")
+            ).wait()
             await create_subprocess_shell(
-                f"gunicorn web.wserver:app --bind 0.0.0.0:{value} --worker-class gevent"
+                f"gunicorn web.wserver:app --bind 0.0.0.0:{value} --worker-class gevent",
             )
     elif key == "EXTENSION_FILTER":
         fx = value.split()
@@ -371,7 +386,9 @@ async def edit_aria(_, message, pre_message, key):
         if not download.is_complete:
             try:
                 await sync_to_async(
-                    aria2.client.change_option, download.gid, {key: value}
+                    aria2.client.change_option,
+                    download.gid,
+                    {key: value},
                 )
             except Exception as e:
                 LOGGER.error(e)
@@ -440,7 +457,7 @@ async def edit_nzb_server(_, message, pre_message, key, index=0):
         if value.isdigit():
             value = int(value)
         res = await sabnzbd_client.add_server(
-            {"name": Config.USENET_SERVERS[index]["name"], key: value}
+            {"name": Config.USENET_SERVERS[index]["name"], key: value},
         )
         if res["config"]["servers"][0][key] == "":
             await send_message(message, "Invalid value")
@@ -481,7 +498,9 @@ async def update_private_file(_, message, pre_message):
         elif file_name in [".netrc", "netrc"]:
             await (await create_subprocess_exec("touch", ".netrc")).wait()
             await (await create_subprocess_exec("chmod", "600", ".netrc")).wait()
-            await (await create_subprocess_exec("cp", ".netrc", "/root/.netrc")).wait()
+            await (
+                await create_subprocess_exec("cp", ".netrc", "/root/.netrc")
+            ).wait()
         await delete_message(message)
     elif doc := message.document:
         file_name = doc.file_name
@@ -496,7 +515,12 @@ async def update_private_file(_, message, pre_message):
                 await rmtree("rclone_sa", ignore_errors=True)
             await (
                 await create_subprocess_exec(
-                    "7z", "x", "-o.", "-aoa", "accounts.zip", "accounts/*.json"
+                    "7z",
+                    "x",
+                    "-o.",
+                    "-aoa",
+                    "accounts.zip",
+                    "accounts/*.json",
                 )
             ).wait()
             await (
@@ -525,7 +549,9 @@ async def update_private_file(_, message, pre_message):
                 await rename("netrc", ".netrc")
                 file_name = ".netrc"
             await (await create_subprocess_exec("chmod", "600", ".netrc")).wait()
-            await (await create_subprocess_exec("cp", ".netrc", "/root/.netrc")).wait()
+            await (
+                await create_subprocess_exec("cp", ".netrc", "/root/.netrc")
+            ).wait()
         elif file_name == "config.py":
             await load_config()
         if "@github.com" in Config.UPSTREAM_REPO:
@@ -554,11 +580,12 @@ async def event_handler(client, query, pfunc, rfunc, document=False):
         return bool(
             user.id == query.from_user.id
             and event.chat.id == chat_id
-            and (event.text or event.document and document)
+            and (event.text or (event.document and document)),
         )
 
     handler = client.add_handler(
-        MessageHandler(pfunc, filters=create(event_filter)), group=-1
+        MessageHandler(pfunc, filters=create(event_filter)),
+        group=-1,
     )
     while handler_dict[chat_id]:
         await sleep(0.5)
@@ -593,8 +620,10 @@ async def edit_bot_settings(client, query):
             show_alert=True,
         )
         await sync_jdownloader()
-    elif data[1] in ["var", "aria", "qbit", "nzb", "nzbserver"] or data[1].startswith(
-        "nzbser"
+    elif data[1] in ["var", "aria", "qbit", "nzb", "nzbserver"] or data[
+        1
+    ].startswith(
+        "nzbser",
     ):
         if data[1] == "nzbserver":
             globals()["start"] = 0
@@ -613,7 +642,9 @@ async def edit_bot_settings(client, query):
                 for key, intvl in list(st.items()):
                     intvl.cancel()
                     intervals["status"][key] = SetInterval(
-                        value, update_status_message, key
+                        value,
+                        update_status_message,
+                        key,
                     )
         elif data[2] == "EXTENSION_FILTER":
             extension_filter.clear()
@@ -633,7 +664,9 @@ async def edit_bot_settings(client, query):
             aria2_options["bt-stop-timeout"] = "0"
             await database.update_aria2("bt-stop-timeout", "0")
         elif data[2] == "BASE_URL":
-            await (await create_subprocess_exec("pkill", "-9", "-f", "gunicorn")).wait()
+            await (
+                await create_subprocess_exec("pkill", "-9", "-f", "gunicorn")
+            ).wait()
         elif data[2] == "BASE_URL_PORT":
             value = 80
             if Config.BASE_URL:
@@ -641,7 +674,7 @@ async def edit_bot_settings(client, query):
                     await create_subprocess_exec("pkill", "-9", "-f", "gunicorn")
                 ).wait()
                 await create_subprocess_shell(
-                    "gunicorn web.wserver:app --bind 0.0.0.0:80 --worker-class gevent"
+                    "gunicorn web.wserver:app --bind 0.0.0.0:80 --worker-class gevent",
                 )
         elif data[2] == "GDRIVE_ID":
             if drives_names and drives_names[0] == "Main":
@@ -688,7 +721,9 @@ async def edit_bot_settings(client, query):
             if not download.is_complete:
                 try:
                     await sync_to_async(
-                        aria2.client.change_option, download.gid, {data[2]: value}
+                        aria2.client.change_option,
+                        download.gid,
+                        {data[2]: value},
                     )
                 except Exception as e:
                     LOGGER.error(e)
@@ -701,14 +736,16 @@ async def edit_bot_settings(client, query):
         await database.update_nzb_config()
     elif data[1] == "syncnzb":
         await query.answer(
-            "Syncronization Started. It takes up to 2 sec!", show_alert=True
+            "Syncronization Started. It takes up to 2 sec!",
+            show_alert=True,
         )
         nzb_options.clear()
         await update_nzb_options()
         await database.update_nzb_config()
     elif data[1] == "syncqbit":
         await query.answer(
-            "Syncronization Started. It takes up to 2 sec!", show_alert=True
+            "Syncronization Started. It takes up to 2 sec!",
+            show_alert=True,
         )
         qbit_options.clear()
         await sync_to_async(update_qb_options)
@@ -722,7 +759,9 @@ async def edit_bot_settings(client, query):
             if not download.is_complete:
                 try:
                     await sync_to_async(
-                        aria2.client.change_option, download.gid, {data[2]: ""}
+                        aria2.client.change_option,
+                        download.gid,
+                        {data[2]: ""},
                     )
                 except Exception as e:
                     LOGGER.error(e)
@@ -743,7 +782,8 @@ async def edit_bot_settings(client, query):
     elif data[1] == "remser":
         index = int(data[2])
         await sabnzbd_client.delete_config(
-            "servers", Config.USENET_SERVERS[index]["name"]
+            "servers",
+            Config.USENET_SERVERS[index]["name"],
         )
         del Config.USENET_SERVERS[index]
         await update_buttons(message, "nzbserver")
@@ -768,7 +808,7 @@ async def edit_bot_settings(client, query):
                 out_file.name = f"{data[2]}.txt"
                 await send_file(message, out_file)
             return
-        elif value == "":
+        if value == "":
             value = None
         await query.answer(f"{value}", show_alert=True)
     elif data[1] == "ariavar" and (state == "edit" or data[2] == "newkey"):
@@ -785,7 +825,7 @@ async def edit_bot_settings(client, query):
                 out_file.name = f"{data[2]}.txt"
                 await send_file(message, out_file)
             return
-        elif value == "":
+        if value == "":
             value = None
         await query.answer(f"{value}", show_alert=True)
     elif data[1] == "qbitvar" and state == "edit":
@@ -802,7 +842,7 @@ async def edit_bot_settings(client, query):
                 out_file.name = f"{data[2]}.txt"
                 await send_file(message, out_file)
             return
-        elif value == "":
+        if value == "":
             value = None
         await query.answer(f"{value}", show_alert=True)
     elif data[1] == "nzbvar" and state == "edit":
@@ -819,7 +859,7 @@ async def edit_bot_settings(client, query):
                 out_file.name = f"{data[2]}.txt"
                 await send_file(message, out_file)
             return
-        elif value == "":
+        if value == "":
             value = None
         await query.answer(f"{value}", show_alert=True)
     elif data[1] == "emptyserkey":
@@ -827,7 +867,7 @@ async def edit_bot_settings(client, query):
         await update_buttons(message, f"nzbser{data[2]}")
         index = int(data[2])
         res = await sabnzbd_client.add_server(
-            {"name": Config.USENET_SERVERS[index]["name"], data[3]: ""}
+            {"name": Config.USENET_SERVERS[index]["name"], data[3]: ""},
         )
         Config.USENET_SERVERS[index][data[3]] = res["config"]["servers"][0][data[3]]
         await database.update_config({"USENET_SERVERS": Config.USENET_SERVERS})
@@ -835,7 +875,9 @@ async def edit_bot_settings(client, query):
         index = 0 if data[2] == "newser" else int(data[1].replace("nzbsevar", ""))
         await query.answer()
         await update_buttons(message, data[2], data[1])
-        pfunc = partial(edit_nzb_server, pre_message=message, key=data[2], index=index)
+        pfunc = partial(
+            edit_nzb_server, pre_message=message, key=data[2], index=index
+        )
         rfunc = partial(update_buttons, message, data[1])
         await event_handler(client, query, pfunc, rfunc)
     elif data[1].startswith("nzbsevar") and state == "view":
@@ -847,7 +889,7 @@ async def edit_bot_settings(client, query):
                 out_file.name = f"{data[2]}.txt"
                 await send_file(message, out_file)
             return
-        elif value == "":
+        if value == "":
             value = None
         await query.answer(f"{value}", show_alert=True)
     elif data[1] == "edit":
@@ -871,7 +913,7 @@ async def edit_bot_settings(client, query):
                 await create_subprocess_shell(
                     f"git add -f {filename} \
                     && git commit -sm botsettings -q \
-                    && git push origin {Config.UPSTREAM_BRANCH} -qf"
+                    && git push origin {Config.UPSTREAM_BRANCH} -qf",
                 )
             ).wait()
         else:
@@ -879,7 +921,7 @@ async def edit_bot_settings(client, query):
                 await create_subprocess_shell(
                     f"git rm -r --cached {filename} \
                     && git commit -sm botsettings -q \
-                    && git push origin {Config.UPSTREAM_BRANCH} -qf"
+                    && git push origin {Config.UPSTREAM_BRANCH} -qf",
                 )
             ).wait()
         await delete_message(message.reply_to_message)
@@ -905,7 +947,9 @@ async def load_config():
         for key, intvl in list(st.items()):
             intvl.cancel()
             intervals["status"][key] = SetInterval(
-                Config.STATUS_UPDATE_INTERVAL, update_status_message, key
+                Config.STATUS_UPDATE_INTERVAL,
+                update_status_message,
+                key,
             )
 
     downloads = aria2.get_downloads()
@@ -942,7 +986,7 @@ async def load_config():
     await (await create_subprocess_exec("pkill", "-9", "-f", "gunicorn")).wait()
     if Config.BASE_URL:
         await create_subprocess_shell(
-            f"gunicorn web.wserver:app --bind 0.0.0.0:{Config.BASE_URL_PORT} --worker-class gevent"
+            f"gunicorn web.wserver:app --bind 0.0.0.0:{Config.BASE_URL_PORT} --worker-class gevent",
         )
 
     if Config.DATABASE_URL:

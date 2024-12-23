@@ -1,22 +1,24 @@
-from httpx import AsyncClient, DecodingError, AsyncHTTPTransport, Timeout
-from urllib3 import disable_warnings
-from urllib3.exceptions import InsecureRequestWarning
 from functools import wraps
 
-from .job_functions import JobFunctions
+from httpx import AsyncClient, AsyncHTTPTransport, DecodingError, Timeout
+from urllib3 import disable_warnings
+from urllib3.exceptions import InsecureRequestWarning
+
 from .exception import APIConnectionError
+from .job_functions import JobFunctions
 
 
 class SabnzbdSession(AsyncClient):
     @wraps(AsyncClient.request)
     async def request(self, method: str, url: str, **kwargs):
-        kwargs.setdefault("timeout", Timeout(connect=30, read=60, write=60, pool=None))
+        kwargs.setdefault(
+            "timeout", Timeout(connect=30, read=60, write=60, pool=None)
+        )
         kwargs.setdefault("follow_redirects", True)
         return await super().request(method, url, **kwargs)
 
 
 class SabnzbdClient(JobFunctions):
-
     LOGGED_IN = False
 
     def __init__(
@@ -26,7 +28,7 @@ class SabnzbdClient(JobFunctions):
         port: str = "8070",
         VERIFY_CERTIFICATE: bool = False,
         RETRIES: int = 10,
-        HTTPX_REQUETS_ARGS: dict = None,
+        HTTPX_REQUETS_ARGS: dict | None = None,
     ):
         if HTTPX_REQUETS_ARGS is None:
             HTTPX_REQUETS_ARGS = {}
@@ -45,7 +47,8 @@ class SabnzbdClient(JobFunctions):
             return self._http_session
 
         transport = AsyncHTTPTransport(
-            retries=self._RETRIES, verify=self._VERIFY_CERTIFICATE
+            retries=self._RETRIES,
+            verify=self._VERIFY_CERTIFICATE,
         )
 
         self._http_session = SabnzbdSession(transport=transport)
@@ -56,9 +59,9 @@ class SabnzbdClient(JobFunctions):
 
     async def call(
         self,
-        params: dict = None,
+        params: dict | None = None,
         api_method: str = "GET",
-        requests_args: dict = None,
+        requests_args: dict | None = None,
         **kwargs,
     ):
         if requests_args is None:

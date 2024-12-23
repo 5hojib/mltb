@@ -1,21 +1,24 @@
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from aria2p import API as ariaAPI, Client as ariaClient
 from asyncio import Lock, new_event_loop, set_event_loop
 from logging import (
-    getLogger,
+    ERROR,
+    INFO,
+    WARNING,
     FileHandler,
     StreamHandler,
-    INFO,
     basicConfig,
-    WARNING,
-    ERROR,
+    getLogger,
 )
-from qbittorrentapi import Client as QbClient
-from sabnzbdapi import SabnzbdClient
 from socket import setdefaulttimeout
 from time import time
+
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from aria2p import API as ariaAPI
+from aria2p import Client as ariaClient
+from qbittorrentapi import Client as QbClient
 from tzlocal import get_localzone
 from uvloop import install
+
+from sabnzbdapi import SabnzbdClient
 
 # from faulthandler import enable as faulthandler_enable
 # faulthandler_enable()

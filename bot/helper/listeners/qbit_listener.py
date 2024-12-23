@@ -1,28 +1,33 @@
-from aiofiles.os import remove, path as aiopath
+import contextlib
 from asyncio import sleep
 from time import time
 
-from ... import (
+from aiofiles.os import path as aiopath
+from aiofiles.os import remove
+
+from bot import (
+    LOGGER,
+    intervals,
+    qb_listener_lock,
+    qb_torrents,
+    qbittorrent_client,
     task_dict,
     task_dict_lock,
-    intervals,
-    qbittorrent_client,
-    qb_torrents,
-    qb_listener_lock,
-    LOGGER,
 )
-from ...core.config_manager import Config
-from ..ext_utils.bot_utils import new_task, sync_to_async
-from ..ext_utils.files_utils import clean_unwanted
-from ..ext_utils.status_utils import get_readable_time, get_task_by_gid
-from ..ext_utils.task_manager import stop_duplicate_check
-from ..mirror_leech_utils.status_utils.qbit_status import QbittorrentStatus
-from ..telegram_helper.message_utils import update_status_message
+from bot.core.config_manager import Config
+from bot.helper.ext_utils.bot_utils import new_task, sync_to_async
+from bot.helper.ext_utils.files_utils import clean_unwanted
+from bot.helper.ext_utils.status_utils import get_readable_time, get_task_by_gid
+from bot.helper.ext_utils.task_manager import stop_duplicate_check
+from bot.helper.mirror_leech_utils.status_utils.qbit_status import QbittorrentStatus
+from bot.helper.telegram_helper.message_utils import update_status_message
 
 
 async def _remove_torrent(hash_, tag):
     await sync_to_async(
-        qbittorrent_client.torrents_delete, torrent_hashes=hash_, delete_files=True
+        qbittorrent_client.torrents_delete,
+        torrent_hashes=hash_,
+        delete_files=True,
     )
     async with qb_listener_lock:
         if tag in qb_torrents:
@@ -55,9 +60,9 @@ async def _on_seed_finish(tor):
 async def _stop_duplicate(tor):
     if task := await get_task_by_gid(tor.hash[:12]):
         if task.listener.stop_duplicate:
-            task.listener.name = tor.content_path.rsplit("/", 1)[-1].rsplit(".!qB", 1)[
-                0
-            ]
+            task.listener.name = tor.content_path.rsplit("/", 1)[-1].rsplit(
+                ".!qB", 1
+            )[0]
             msg, button = await stop_duplicate_check(task.listener)
             if msg:
                 _on_download_error(msg, tor, button)
@@ -70,20 +75,20 @@ async def _on_download_complete(tor):
     if task := await get_task_by_gid(ext_hash[:12]):
         if not task.listener.seed:
             await sync_to_async(
-                qbittorrent_client.torrents_stop, torrent_hashes=ext_hash
+                qbittorrent_client.torrents_stop,
+                torrent_hashes=ext_hash,
             )
         if task.listener.select:
             await clean_unwanted(task.listener.dir)
             path = tor.content_path.rsplit("/", 1)[0]
             res = await sync_to_async(
-                qbittorrent_client.torrents_files, torrent_hash=ext_hash
+                qbittorrent_client.torrents_files,
+                torrent_hash=ext_hash,
             )
             for f in res:
                 if f.priority == 0 and await aiopath.exists(f"{path}/{f.name}"):
-                    try:
+                    with contextlib.suppress(Exception):
                         await remove(f"{path}/{f.name}")
-                    except:
-                        pass
         await task.listener.on_download_complete()
         if intervals["stopAll"]:
             return
@@ -92,7 +97,8 @@ async def _on_download_complete(tor):
                 if task.listener.mid in task_dict:
                     removed = False
                     task_dict[task.listener.mid] = QbittorrentStatus(
-                        task.listener, True
+                        task.listener,
+                        True,
                     )
                 else:
                     removed = True
@@ -176,7 +182,8 @@ async def _qb_listener():
                         )
                     elif state == "error":
                         await _on_download_error(
-                            "No enough space for this torrent on device", tor_info
+                            "No enough space for this torrent on device",
+                            tor_info,
                         )
                     elif (
                         tor_info.completion_on != -1

@@ -1,17 +1,15 @@
-from html import escape
-from psutil import virtual_memory, cpu_percent, disk_usage
-from time import time
+import contextlib
 from asyncio import iscoroutinefunction
+from html import escape
+from time import time
 
-from ... import (
-    task_dict,
-    task_dict_lock,
-    bot_start_time,
-    status_dict,
-)
-from ...core.config_manager import Config
+from psutil import cpu_percent, disk_usage, virtual_memory
+
+from bot import bot_start_time, status_dict, task_dict, task_dict_lock
+from bot.core.config_manager import Config
+from bot.helper.telegram_helper.button_build import ButtonMaker
+
 from .bot_utils import sync_to_async
-from ..telegram_helper.button_build import ButtonMaker
 
 SIZE_UNITS = ["B", "KB", "MB", "GB", "TB", "PB"]
 
@@ -65,30 +63,29 @@ async def get_task_by_gid(gid: str):
 def get_specific_tasks(status, user_id):
     if status == "All":
         if user_id:
-            return [tk for tk in task_dict.values() if tk.listener.user_id == user_id]
-        else:
-            return list(task_dict.values())
-    elif user_id:
+            return [
+                tk for tk in task_dict.values() if tk.listener.user_id == user_id
+            ]
+        return list(task_dict.values())
+    if user_id:
         return [
             tk
             for tk in task_dict.values()
             if tk.listener.user_id == user_id
             and (
-                (st := tk.status())
-                and st == status
-                or status == MirrorStatus.STATUS_DOWNLOAD
-                and st not in STATUSES.values()
+                ((st := tk.status()) and st == status)
+                or (
+                    status == MirrorStatus.STATUS_DOWNLOAD
+                    and st not in STATUSES.values()
+                )
             )
         ]
-    else:
-        return [
-            tk
-            for tk in task_dict.values()
-            if (st := tk.status())
-            and st == status
-            or status == MirrorStatus.STATUS_DOWNLOAD
-            and st not in STATUSES.values()
-        ]
+    return [
+        tk
+        for tk in task_dict.values()
+        if ((st := tk.status()) and st == status)
+        or (status == MirrorStatus.STATUS_DOWNLOAD and st not in STATUSES.values())
+    ]
 
 
 async def get_all_tasks(req_status: str, user_id):
@@ -133,7 +130,7 @@ def time_to_seconds(time_duration):
         else:
             return 0
         return hours * 3600 + minutes * 60 + seconds
-    except ValueError as e:
+    except ValueError:
         return 0
 
 
@@ -180,7 +177,8 @@ async def get_readable_message(sid, is_user, page_no=1, status="All", page_step=
     start_position = (page_no - 1) * STATUS_LIMIT
 
     for index, task in enumerate(
-        tasks[start_position : STATUS_LIMIT + start_position], start=1
+        tasks[start_position : STATUS_LIMIT + start_position],
+        start=1,
     ):
         tstatus = await sync_to_async(task.status) if status == "All" else status
         if task.listener.is_super_chat:
@@ -205,10 +203,8 @@ async def get_readable_message(sid, is_user, page_no=1, status="All", page_step=
             msg += f"\n<b>Processed:</b> {task.processed_bytes()} of {task.size()}"
             msg += f"\n<b>Speed:</b> {task.speed()} | <b>ETA:</b> {task.eta()}"
             if hasattr(task, "seeders_num"):
-                try:
+                with contextlib.suppress(Exception):
                     msg += f"\n<b>Seeders:</b> {task.seeders_num()} | <b>Leechers:</b> {task.leechers_num()}"
-                except:
-                    pass
         elif tstatus == MirrorStatus.STATUS_SEED:
             msg += f"\n<b>Size: </b>{task.size()}"
             msg += f"\n<b>Speed: </b>{task.seed_speed()}"
@@ -222,8 +218,7 @@ async def get_readable_message(sid, is_user, page_no=1, status="All", page_step=
     if len(msg) == 0:
         if status == "All":
             return None, None
-        else:
-            msg = f"No Active {status} Tasks!\n\n"
+        msg = f"No Active {status} Tasks!\n\n"
     buttons = ButtonMaker()
     if not is_user:
         buttons.data_button("📜", f"status {sid} ov", position="header")

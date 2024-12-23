@@ -1,22 +1,24 @@
-from google.oauth2 import service_account
-from googleapiclient.discovery import build
-from google_auth_httplib2 import AuthorizedHttp
-from googleapiclient.http import build_http
-from logging import getLogger, ERROR
-from os import path as ospath, listdir
+from logging import ERROR, getLogger
+from os import listdir
+from os import path as ospath
 from pickle import load as pload
 from random import randrange
 from re import search as re_search
 from urllib.parse import parse_qs, urlparse
+
+from google.oauth2 import service_account
+from google_auth_httplib2 import AuthorizedHttp
+from googleapiclient.discovery import build
+from googleapiclient.http import build_http
 from tenacity import (
     retry,
-    wait_exponential,
-    stop_after_attempt,
     retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
 )
 
-from ....core.config_manager import Config
-from ...ext_utils.links_utils import is_gdrive_id
+from bot.core.config_manager import Config
+from bot.helper.ext_utils.links_utils import is_gdrive_id
 
 LOGGER = getLogger(__name__)
 getLogger("googleapiclient.discovery").setLevel(ERROR)
@@ -30,7 +32,9 @@ class GoogleDriveHelper:
         self.G_DRIVE_BASE_DOWNLOAD_URL = (
             "https://drive.google.com/uc?id={}&export=download"
         )
-        self.G_DRIVE_DIR_BASE_DOWNLOAD_URL = "https://drive.google.com/drive/folders/{}"
+        self.G_DRIVE_DIR_BASE_DOWNLOAD_URL = (
+            "https://drive.google.com/drive/folders/{}"
+        )
         self.is_uploading = False
         self.is_downloading = False
         self.is_cloning = False
@@ -65,7 +69,9 @@ class GoogleDriveHelper:
                 self.status.total_size * self.status.progress()
                 - self.file_processed_bytes
             )
-            self.file_processed_bytes = self.status.total_size * self.status.progress()
+            self.file_processed_bytes = (
+                self.status.total_size * self.status.progress()
+            )
             self.proc_bytes += chunk_size
             self.total_time += self.update_interval
 
@@ -75,9 +81,12 @@ class GoogleDriveHelper:
             json_files = listdir("accounts")
             self.sa_number = len(json_files)
             self.sa_index = randrange(self.sa_number)
-            LOGGER.info(f"Authorizing with {json_files[self.sa_index]} service account")
+            LOGGER.info(
+                f"Authorizing with {json_files[self.sa_index]} service account"
+            )
             credentials = service_account.Credentials.from_service_account_file(
-                f"accounts/{json_files[self.sa_index]}", scopes=self._OAUTH_SCOPE
+                f"accounts/{json_files[self.sa_index]}",
+                scopes=self._OAUTH_SCOPE,
             )
         elif ospath.exists(self.token_path):
             LOGGER.info(f"Authorize with {self.token_path}")
@@ -210,7 +219,9 @@ class GoogleDriveHelper:
         file_id = file.get("id")
         if not Config.IS_TEAM_DRIVE:
             self.set_permission(file_id)
-        LOGGER.info(f'Created G-Drive Folder:\nName: {file.get("name")}\nID: {file_id}')
+        LOGGER.info(
+            f'Created G-Drive Folder:\nName: {file.get("name")}\nID: {file_id}'
+        )
         return file_id
 
     def escapes(self, estr):
@@ -247,10 +258,10 @@ class GoogleDriveHelper:
         elif self.is_cloning:
             LOGGER.info(f"Cancelling Clone: {self.listener.name}")
             await self.listener.on_upload_error(
-                "your clone has been stopped and cloned data has been deleted!"
+                "your clone has been stopped and cloned data has been deleted!",
             )
         elif self.is_uploading:
             LOGGER.info(f"Cancelling Upload: {self.listener.name}")
             await self.listener.on_upload_error(
-                "your upload has been stopped and uploaded data has been deleted!"
+                "your upload has been stopped and uploaded data has been deleted!",
             )

@@ -1,29 +1,33 @@
-from signal import signal, SIGINT
 from asyncio import gather
+from signal import SIGINT, signal
 
 from .core.config_manager import Config
 
 Config.load()
 
 from . import LOGGER, bot_loop
-from .core.mltb_client import TgClient
 from .core.handlers import add_handlers
+from .core.mltb_client import TgClient
 from .core.startup import (
-    load_settings,
     load_configurations,
+    load_settings,
     save_settings,
     update_aria2_options,
     update_nzb_options,
     update_qb_options,
     update_variables,
 )
-from .helper.ext_utils.telegraph_helper import telegraph
-from .helper.ext_utils.bot_utils import sync_to_async, create_help_buttons
+from .helper.ext_utils.bot_utils import create_help_buttons, sync_to_async
 from .helper.ext_utils.files_utils import clean_all, exit_clean_up
 from .helper.ext_utils.jdownloader_booter import jdownloader
+from .helper.ext_utils.telegraph_helper import telegraph
 from .helper.listeners.aria2_listener import start_aria2_listener
 from .helper.mirror_leech_utils.rclone_utils.serve import rclone_serve_booter
-from .modules import initiate_search_tools, get_packages_version, restart_notification
+from .modules import (
+    get_packages_version,
+    initiate_search_tools,
+    restart_notification,
+)
 
 
 async def main():

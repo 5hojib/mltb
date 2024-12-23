@@ -1,16 +1,16 @@
-from asyncio import sleep, gather
+from asyncio import gather, sleep
 
-from ... import (
+from bot import (
+    LOGGER,
     intervals,
-    sabnzbd_client,
     nzb_jobs,
     nzb_listener_lock,
+    sabnzbd_client,
     task_dict_lock,
-    LOGGER,
 )
-from ..ext_utils.bot_utils import new_task
-from ..ext_utils.status_utils import get_task_by_gid
-from ..ext_utils.task_manager import stop_duplicate_check
+from bot.helper.ext_utils.bot_utils import new_task
+from bot.helper.ext_utils.status_utils import get_task_by_gid
+from bot.helper.ext_utils.task_manager import stop_duplicate_check
 
 
 async def _remove_job(nzo_id, mid):
@@ -82,16 +82,19 @@ async def _nzb_listener():
                             nzb_jobs[nzo_id]["status"] = "Completed"
                     elif job["status"] == "Failed":
                         await _on_download_error(job["fail_message"], nzo_id)
-                    elif job["status"] in [
-                        "QuickCheck",
-                        "Verifying",
-                        "Repairing",
-                        "Fetching",
-                        "Moving",
-                        "Extracting",
-                    ]:
-                        if job["status"] != nzb_jobs[nzo_id]["status"]:
-                            await _change_status(nzo_id, job["status"])
+                    elif (
+                        job["status"]
+                        in [
+                            "QuickCheck",
+                            "Verifying",
+                            "Repairing",
+                            "Fetching",
+                            "Moving",
+                            "Extracting",
+                        ]
+                        and job["status"] != nzb_jobs[nzo_id]["status"]
+                    ):
+                        await _change_status(nzo_id, job["status"])
                 for dl in downloads:
                     nzo_id = dl["nzo_id"]
                     if nzo_id not in nzb_jobs:

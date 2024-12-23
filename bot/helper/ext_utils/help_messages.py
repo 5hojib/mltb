@@ -1,4 +1,4 @@
-from ..telegram_helper.bot_commands import BotCommands
+from bot.helper.telegram_helper.bot_commands import BotCommands
 
 mirror = """<b>Send link along with command line or </b>
 

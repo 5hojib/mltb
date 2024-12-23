@@ -1,23 +1,25 @@
-from httpx import AsyncClient
-from asyncio.subprocess import PIPE
-from functools import partial, wraps
-from concurrent.futures import ThreadPoolExecutor
 from asyncio import (
     create_subprocess_exec,
     create_subprocess_shell,
     run_coroutine_threadsafe,
     sleep,
 )
+from asyncio.subprocess import PIPE
+from concurrent.futures import ThreadPoolExecutor
+from functools import partial, wraps
 
-from ... import user_data, bot_loop
-from ...core.config_manager import Config
-from ..telegram_helper.button_build import ButtonMaker
-from .telegraph_helper import telegraph
+from httpx import AsyncClient
+
+from bot import bot_loop, user_data
+from bot.core.config_manager import Config
+from bot.helper.telegram_helper.button_build import ButtonMaker
+
 from .help_messages import (
-    YT_HELP_DICT,
-    MIRROR_HELP_DICT,
     CLONE_HELP_DICT,
+    MIRROR_HELP_DICT,
+    YT_HELP_DICT,
 )
+from .telegraph_helper import telegraph
 
 COMMAND_USAGE = {}
 
@@ -63,7 +65,8 @@ def bt_selection_buttons(id_):
         buttons.data_button("Pincode", f"sel pin {gid} {pin}")
     else:
         buttons.url_button(
-            "Select Files", f"{Config.BASE_URL}/app/files?gid={id_}&pin={pin}"
+            "Select Files",
+            f"{Config.BASE_URL}/app/files?gid={id_}&pin={pin}",
         )
     buttons.data_button("Done Selecting", f"sel done {gid} {id_}")
     buttons.data_button("Cancel", f"sel cancel {gid}")
@@ -74,7 +77,8 @@ async def get_telegraph_list(telegraph_content):
     path = [
         (
             await telegraph.create_page(
-                title="Mirror-Leech-Bot Drive Search", content=content
+                title="Mirror-Leech-Bot Drive Search",
+                content=content,
             )
         )["path"]
         for content in telegraph_content
@@ -115,12 +119,17 @@ def arg_parser(items, arg_base):
         if part in arg_base:
             if arg_start == -1:
                 arg_start = i
-            if (
-                i + 1 == t
-                and part in bool_arg_set
-                or part
-                in ["-s", "-j", "-f", "-fd", "-fu", "-sync", "-ml", "-doc", "-med"]
-            ):
+            if (i + 1 == t and part in bool_arg_set) or part in [
+                "-s",
+                "-j",
+                "-f",
+                "-fd",
+                "-fu",
+                "-sync",
+                "-ml",
+                "-doc",
+                "-med",
+            ]:
                 arg_base[part] = True
             else:
                 sub_list = []
@@ -192,8 +201,7 @@ async def cmd_exec(cmd, shell=False):
 def new_task(func):
     @wraps(func)
     async def wrapper(*args, **kwargs):
-        task = bot_loop.create_task(func(*args, **kwargs))
-        return task
+        return bot_loop.create_task(func(*args, **kwargs))
 
     return wrapper
 

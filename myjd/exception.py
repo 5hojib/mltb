@@ -34,25 +34,17 @@ from .const import (
 class MYJDException(BaseException):
     """Base MyJDownloader Exception."""
 
-    pass
-
 
 class MYJDConnectionException(MYJDException):
     """Connection Exception."""
-
-    pass
 
 
 class MYJDDeviceNotFoundException(MYJDException):
     """Device not found Exception."""
 
-    pass
-
 
 class MYJDDecodeException(MYJDException):
     """Decode Exception."""
-
-    pass
 
 
 class MYJDApiException(MYJDException):
@@ -60,179 +52,131 @@ class MYJDApiException(MYJDException):
 
     @classmethod
     def get_exception(
-        cls, exception_source, exception_type=EXCEPTION_UNKNOWN, *args, **kwargs
+        cls,
+        exception_source,
+        exception_type=EXCEPTION_UNKNOWN,
+        *args,
+        **kwargs,
     ):
         """Get exception object from MyJDownloader exception type."""
         return EXCEPTION_CLASSES.get(exception_type.upper(), MYJDUnknownException)(
-            exception_source, *args, **kwargs
+            exception_source,
+            *args,
+            **kwargs,
         )
 
     def __init__(self, exception_source, *args, **kwargs):
         """Initialize MyJDownloader API exception."""
         self.source = exception_source.upper()
-        super(MYJDApiException, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
 
 class MYJDApiCommandNotFoundException(MYJDApiException):
     """MyJDownloader command not found API Exception."""
 
-    pass
-
 
 class MYJDApiInterfaceNotFoundException(MYJDApiException):
     """MyJDownloader interface not found API Exception."""
-
-    pass
 
 
 class MYJDAuthFailedException(MYJDApiException):
     """MyJDownloader auth failed API Exception."""
 
-    pass
-
 
 class MYJDBadParametersException(MYJDApiException):
     """MyJDownloader bad parameters API Exception."""
-
-    pass
 
 
 class MYJDBadRequestException(MYJDApiException):
     """MyJDownloader bad request API Exception."""
 
-    pass
-
 
 class MYJDChallengeFailedException(MYJDApiException):
     """MyJDownloader challenge failed API Exception."""
-
-    pass
 
 
 class MYJDEmailForbiddenException(MYJDApiException):
     """MyJDownloader email forbidden API Exception."""
 
-    pass
-
 
 class MYJDEmailInvalidException(MYJDApiException):
     """MyJDownloader email invalid API Exception."""
-
-    pass
 
 
 class MYJDErrorEmailNotConfirmedException(MYJDApiException):
     """MyJDownloader email not confirmed API Exception."""
 
-    pass
-
 
 class MYJDFailedException(MYJDApiException):
     """MyJDownloader failed API Exception."""
-
-    pass
 
 
 class MYJDFileNotFoundException(MYJDApiException):
     """MyJDownloader file not found API Exception."""
 
-    pass
-
 
 class MYJDInternalServerErrorException(MYJDApiException):
     """MyJDownloader internal server error API Exception."""
-
-    pass
 
 
 class MYJDMaintenanceException(MYJDApiException):
     """MyJDownloader maintenance API Exception."""
 
-    pass
-
 
 class MYJDMethodForbiddenException(MYJDApiException):
     """MyJDownloader method forbidden API Exception."""
-
-    pass
 
 
 class MYJDOfflineException(MYJDApiException):
     """MyJDownloader offline API Exception."""
 
-    pass
-
 
 class MYJDOutdatedException(MYJDApiException):
     """MyJDownloader outdated API Exception."""
-
-    pass
 
 
 class MYJDOverloadException(MYJDApiException):
     """MyJDownloader overload API Exception."""
 
-    pass
-
 
 class MYJDSessionException(MYJDApiException):
     """MyJDownloader session API Exception."""
-
-    pass
 
 
 class MYJDStorageAlreadyExistsException(MYJDApiException):
     """MyJDownloader storage already exists API Exception."""
 
-    pass
-
 
 class MYJDStorageInvalidKeyException(MYJDApiException):
     """MyJDownloader storage invalid key API Exception."""
-
-    pass
 
 
 class MYJDStorageInvalidStorageIdException(MYJDApiException):
     """MyJDownloader storage invalid storage id API Exception."""
 
-    pass
-
 
 class MYJDStorageKeyNotFoundException(MYJDApiException):
     """MyJDownloader storage key not found API Exception."""
-
-    pass
 
 
 class MYJDStorageLimitReachedException(MYJDApiException):
     """MyJDownloader storage limit reached API Exception."""
 
-    pass
-
 
 class MYJDStorageNotFoundException(MYJDApiException):
     """MyJDownloader storage not found API Exception."""
-
-    pass
 
 
 class MYJDTokenInvalidException(MYJDApiException):
     """MyJDownloader token invalid API Exception."""
 
-    pass
-
 
 class MYJDTooManyRequestsException(MYJDApiException):
     """MyJDownloader too many request API Exception."""
 
-    pass
-
 
 class MYJDUnknownException(MYJDApiException):
     """MyJDownloader unknown API Exception."""
-
-    pass
 
 
 EXCEPTION_CLASSES = {

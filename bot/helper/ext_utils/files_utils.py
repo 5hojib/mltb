@@ -1,15 +1,21 @@
-from aiofiles.os import remove, path as aiopath, listdir, rmdir
-from aioshutil import rmtree as aiormtree
-from magic import Magic
-from os import walk, path as ospath, makedirs
-from re import split as re_split, I, search as re_search, escape
+from os import makedirs, walk
+from os import path as ospath
+from re import IGNORECASE, escape
+from re import search as re_search
+from re import split as re_split
 from shutil import rmtree
 from subprocess import run as srun
 from sys import exit
 
-from ... import aria2, LOGGER, qbittorrent_client
-from ...core.config_manager import Config
-from .bot_utils import sync_to_async, cmd_exec
+from aiofiles.os import listdir, remove, rmdir
+from aiofiles.os import path as aiopath
+from aioshutil import rmtree as aiormtree
+from magic import Magic
+
+from bot import LOGGER, aria2, qbittorrent_client
+from bot.core.config_manager import Config
+
+from .bot_utils import cmd_exec, sync_to_async
 from .exceptions import NotSupportedExtractionArchive
 
 ARCH_EXT = [
@@ -107,7 +113,10 @@ def exit_clean_up(signal, frame):
     try:
         LOGGER.info("Please wait, while we clean up and stop the running downloads")
         clean_all()
-        srun(["pkill", "-9", "-f", "gunicorn|aria2c|qbittorrent-nox|ffmpeg|java"])
+        srun(
+            ["pkill", "-9", "-f", "gunicorn|aria2c|qbittorrent-nox|ffmpeg|java"],
+            check=False,
+        )
         exit(0)
     except KeyboardInterrupt:
         LOGGER.warning("Force Exiting before the cleanup finishes!")
@@ -124,8 +133,7 @@ async def clean_unwanted(path, custom_list=None):
             if (
                 filee.endswith(".!qB")
                 or f_path in custom_list
-                or filee.endswith(".parts")
-                and filee.startswith(".")
+                or (filee.endswith(".parts") and filee.startswith("."))
             ):
                 await remove(f_path)
         if dirpath.endswith((".unwanted", "splited_files_mltb", "copied_mltb")):
@@ -165,18 +173,18 @@ async def count_files_and_folders(path, extension_filter, unwanted_files=None):
 
 
 def get_base_name(orig_path):
-    extension = next((ext for ext in ARCH_EXT if orig_path.lower().endswith(ext)), "")
+    extension = next(
+        (ext for ext in ARCH_EXT if orig_path.lower().endswith(ext)), ""
+    )
     if extension != "":
-        return re_split(f"{extension}$", orig_path, maxsplit=1, flags=I)[0]
-    else:
-        raise NotSupportedExtractionArchive("File format not supported for extraction")
+        return re_split(f"{extension}$", orig_path, maxsplit=1, flags=IGNORECASE)[0]
+    raise NotSupportedExtractionArchive("File format not supported for extraction")
 
 
 def get_mime_type(file_path):
     mime = Magic(mime=True)
     mime_type = mime.from_file(file_path)
-    mime_type = mime_type or "text/plain"
-    return mime_type
+    return mime_type or "text/plain"
 
 
 async def join_files(path):
@@ -185,7 +193,8 @@ async def join_files(path):
     exists = False
     for file_ in files:
         if re_search(r"\.0+2$", file_) and await sync_to_async(
-            get_mime_type, f"{path}/{file_}"
+            get_mime_type,
+            f"{path}/{file_}",
         ) not in ["application/x-7z-compressed", "application/zip"]:
             exists = True
             final_name = file_.rsplit(".", 1)[0]

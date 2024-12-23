@@ -1,12 +1,16 @@
-from ..helper.ext_utils.bot_utils import COMMAND_USAGE, new_task
-from ..helper.ext_utils.help_messages import (
-    YT_HELP_DICT,
-    MIRROR_HELP_DICT,
+from bot.helper.ext_utils.bot_utils import COMMAND_USAGE, new_task
+from bot.helper.ext_utils.help_messages import (
     CLONE_HELP_DICT,
+    MIRROR_HELP_DICT,
+    YT_HELP_DICT,
+    help_string,
 )
-from ..helper.telegram_helper.button_build import ButtonMaker
-from ..helper.telegram_helper.message_utils import edit_message, delete_message, send_message
-from ..helper.ext_utils.help_messages import help_string
+from bot.helper.telegram_helper.button_build import ButtonMaker
+from bot.helper.telegram_helper.message_utils import (
+    delete_message,
+    edit_message,
+    send_message,
+)
 
 
 @new_task
@@ -18,13 +22,19 @@ async def arg_usage(_, query):
     elif data[1] == "back":
         if data[2] == "m":
             await edit_message(
-                message, COMMAND_USAGE["mirror"][0], COMMAND_USAGE["mirror"][1]
+                message,
+                COMMAND_USAGE["mirror"][0],
+                COMMAND_USAGE["mirror"][1],
             )
         elif data[2] == "y":
-            await edit_message(message, COMMAND_USAGE["yt"][0], COMMAND_USAGE["yt"][1])
+            await edit_message(
+                message, COMMAND_USAGE["yt"][0], COMMAND_USAGE["yt"][1]
+            )
         elif data[2] == "c":
             await edit_message(
-                message, COMMAND_USAGE["clone"][0], COMMAND_USAGE["clone"][1]
+                message,
+                COMMAND_USAGE["clone"][0],
+                COMMAND_USAGE["clone"][1],
             )
     elif data[1] == "mirror":
         buttons = ButtonMaker()

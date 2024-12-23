@@ -1,5 +1,5 @@
-from .... import LOGGER, subprocess_lock
-from ...ext_utils.status_utils import get_readable_file_size, MirrorStatus
+from bot import LOGGER, subprocess_lock
+from bot.helper.ext_utils.status_utils import MirrorStatus, get_readable_file_size
 
 
 class FFmpegStatus:
@@ -21,12 +21,11 @@ class FFmpegStatus:
     def status(self):
         if self.cstatus == "Convert":
             return MirrorStatus.STATUS_CONVERT
-        elif self.cstatus == "Split":
+        if self.cstatus == "Split":
             return MirrorStatus.STATUS_SPLIT
-        elif self.cstatus == "Sample Video":
+        if self.cstatus == "Sample Video":
             return MirrorStatus.STATUS_SAMVID
-        else:
-            return MirrorStatus.STATUS_FFMPEG
+        return MirrorStatus.STATUS_FFMPEG
 
     def task(self):
         return self

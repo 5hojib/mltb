@@ -1,31 +1,26 @@
-from psutil import cpu_percent, virtual_memory, disk_usage
 from time import time
 
-from .. import (
-    task_dict_lock,
-    status_dict,
-    task_dict,
-    bot_start_time,
-    intervals,
-)
-from ..core.config_manager import Config
-from ..helper.ext_utils.bot_utils import sync_to_async, new_task
-from ..helper.ext_utils.status_utils import (
+from psutil import cpu_percent, disk_usage, virtual_memory
+
+from bot import bot_start_time, intervals, status_dict, task_dict, task_dict_lock
+from bot.core.config_manager import Config
+from bot.helper.ext_utils.bot_utils import new_task, sync_to_async
+from bot.helper.ext_utils.status_utils import (
     MirrorStatus,
     get_readable_file_size,
     get_readable_time,
     speed_string_to_bytes,
 )
-from ..helper.telegram_helper.bot_commands import BotCommands
-from ..helper.telegram_helper.message_utils import (
-    send_message,
-    delete_message,
+from bot.helper.telegram_helper.bot_commands import BotCommands
+from bot.helper.telegram_helper.button_build import ButtonMaker
+from bot.helper.telegram_helper.message_utils import (
     auto_delete_message,
+    delete_message,
+    edit_message,
+    send_message,
     send_status_message,
     update_status_message,
-    edit_message,
 )
-from ..helper.telegram_helper.button_build import ButtonMaker
 
 
 @new_task

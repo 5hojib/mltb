@@ -1,9 +1,10 @@
-from aiofiles import open as aiopen
-from aiofiles.os import path as aiopath
 from asyncio import create_subprocess_exec
 from configparser import RawConfigParser
 
-from ....core.config_manager import Config
+from aiofiles import open as aiopen
+from aiofiles.os import path as aiopath
+
+from bot.core.config_manager import Config
 
 RcloneServe = []
 
@@ -18,7 +19,7 @@ async def rclone_serve_booter():
                 pass
         return
     config = RawConfigParser()
-    async with aiopen("rclone.conf", "r") as f:
+    async with aiopen("rclone.conf") as f:
         contents = await f.read()
         config.read_string(contents)
     if not config.has_section("combine"):
