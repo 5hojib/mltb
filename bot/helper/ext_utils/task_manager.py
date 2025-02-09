@@ -1,16 +1,17 @@
 from asyncio import Event
 
-from ... import (
+from bot import (
+    LOGGER,
+    non_queued_dl,
+    non_queued_up,
+    queue_dict_lock,
     queued_dl,
     queued_up,
-    non_queued_up,
-    non_queued_dl,
-    queue_dict_lock,
-    LOGGER,
 )
-from ...core.config_manager import Config
-from ..mirror_leech_utils.gdrive_utils.search import GoogleDriveSearch
-from .bot_utils import sync_to_async, get_telegraph_list
+from bot.core.config_manager import Config
+from bot.helper.mirror_leech_utils.gdrive_utils.search import GoogleDriveSearch
+
+from .bot_utils import get_telegraph_list, sync_to_async
 from .files_utils import get_base_name
 from .links_utils import is_gdrive_id
 

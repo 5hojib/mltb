@@ -1,11 +1,11 @@
 from time import time
 
-from .... import LOGGER
-from ....core.torrent_manager import TorrentManager, aria2_name
-from ...ext_utils.status_utils import (
+from bot import LOGGER
+from bot.core.torrent_manager import TorrentManager, aria2_name
+from bot.helper.ext_utils.status_utils import (
     MirrorStatus,
-    get_readable_time,
     get_readable_file_size,
+    get_readable_time,
 )
 
 
@@ -36,15 +36,17 @@ class Aria2Status:
 
     def progress(self):
         try:
-            return f"{round(int(self._download.get("completedLength", "0")) / int(self._download.get("totalLength", "0")) * 100, 2)}%"
+            return f"{round(int(self._download.get('completedLength', '0')) / int(self._download.get('totalLength', '0')) * 100, 2)}%"
         except:
             return "0%"
 
     def processed_bytes(self):
-        return get_readable_file_size(int(self._download.get("completedLength", "0")))
+        return get_readable_file_size(
+            int(self._download.get("completedLength", "0"))
+        )
 
     def speed(self):
-        return f"{get_readable_file_size(int(self._download.get("downloadSpeed", "0")))}/s"
+        return f"{get_readable_file_size(int(self._download.get('downloadSpeed', '0')))}/s"
 
     def name(self):
         return aria2_name(self._download)
@@ -59,7 +61,7 @@ class Aria2Status:
                     int(self._download.get("totalLength", "0"))
                     - int(self._download.get("completedLength", "0"))
                 )
-                / int(self._download.get("downloadSpeed", "0"))
+                / int(self._download.get("downloadSpeed", "0")),
             )
         except:
             return "-"
@@ -69,14 +71,12 @@ class Aria2Status:
         if self._download.get("status", "") == "waiting" or self.queued:
             if self.seeding:
                 return MirrorStatus.STATUS_QUEUEUP
-            else:
-                return MirrorStatus.STATUS_QUEUEDL
-        elif self._download.get("status", "") == "paused":
+            return MirrorStatus.STATUS_QUEUEDL
+        if self._download.get("status", "") == "paused":
             return MirrorStatus.STATUS_PAUSED
-        elif self._download.get("seeder", "") == "true" and self.seeding:
+        if self._download.get("seeder", "") == "true" and self.seeding:
             return MirrorStatus.STATUS_SEED
-        else:
-            return MirrorStatus.STATUS_DOWNLOAD
+        return MirrorStatus.STATUS_DOWNLOAD
 
     def seeders_num(self):
         return self._download.get("numSeeders", 0)
@@ -88,7 +88,7 @@ class Aria2Status:
         return get_readable_file_size(int(self._download.get("uploadLength", "0")))
 
     def seed_speed(self):
-        return f"{get_readable_file_size(int(self._download.get("uploadSpeed", "0")))}/s"
+        return f"{get_readable_file_size(int(self._download.get('uploadSpeed', '0')))}/s"
 
     def ratio(self):
         try:
@@ -116,7 +116,7 @@ class Aria2Status:
         if self._download.get("seeder", "") == "true" and self.seeding:
             LOGGER.info(f"Cancelling Seed: {self.name()}")
             await self.listener.on_upload_error(
-                f"Seeding stopped with Ratio: {self.ratio()} and Time: {self.seeding_time()}"
+                f"Seeding stopped with Ratio: {self.ratio()} and Time: {self.seeding_time()}",
             )
         else:
             if self.queued:

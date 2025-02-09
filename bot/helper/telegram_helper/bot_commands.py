@@ -1,4 +1,4 @@
-from ...core.config_manager import Config
+from bot.core.config_manager import Config
 
 
 class BotCommands:

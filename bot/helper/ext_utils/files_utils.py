@@ -1,22 +1,33 @@
-from aioshutil import rmtree as aiormtree
 from asyncio import create_subprocess_exec, sleep, wait_for
 from asyncio.subprocess import PIPE
-from magic import Magic
-from os import walk, path as ospath, readlink
-from re import split as re_split, I, search as re_search, escape
+from os import path as ospath
+from os import readlink, walk
+from re import IGNORECASE, escape
+from re import search as re_search
+from re import split as re_split
+
 from aiofiles.os import (
-    remove,
-    path as aiopath,
     listdir,
+    remove,
     rmdir,
-    readlink as aioreadlink,
     symlink,
+)
+from aiofiles.os import (
     makedirs as aiomakedirs,
 )
+from aiofiles.os import (
+    path as aiopath,
+)
+from aiofiles.os import (
+    readlink as aioreadlink,
+)
+from aioshutil import rmtree as aiormtree
+from magic import Magic
 
-from ... import LOGGER, DOWNLOAD_DIR
-from ...core.torrent_manager import TorrentManager
-from .bot_utils import sync_to_async, cmd_exec
+from bot import DOWNLOAD_DIR, LOGGER
+from bot.core.torrent_manager import TorrentManager
+
+from .bot_utils import cmd_exec, sync_to_async
 from .exceptions import NotSupportedExtractionArchive
 
 ARCH_EXT = [
@@ -95,7 +106,7 @@ SPLIT_REGEX = r"\.r\d+$|\.7z\.\d+$|\.z\d+$|\.zip\.\d+$|\.part\d+\.rar$"
 
 
 def is_first_archive_split(file):
-    return bool(re_search(FIRST_SPLIT_REGEX, file.lower(), I))
+    return bool(re_search(FIRST_SPLIT_REGEX, file.lower(), IGNORECASE))
 
 
 def is_archive(file):
@@ -103,7 +114,7 @@ def is_archive(file):
 
 
 def is_archive_split(file):
-    return bool(re_search(SPLIT_REGEX, file.lower(), I))
+    return bool(re_search(SPLIT_REGEX, file.lower(), IGNORECASE))
 
 
 async def clean_target(opath):
@@ -176,11 +187,12 @@ async def count_files_and_folders(opath):
 
 
 def get_base_name(orig_path):
-    extension = next((ext for ext in ARCH_EXT if orig_path.lower().endswith(ext)), "")
+    extension = next(
+        (ext for ext in ARCH_EXT if orig_path.lower().endswith(ext)), ""
+    )
     if extension != "":
-        return re_split(f"{extension}$", orig_path, maxsplit=1, flags=I)[0]
-    else:
-        raise NotSupportedExtractionArchive("File format not supported for extraction")
+        return re_split(f"{extension}$", orig_path, maxsplit=1, flags=IGNORECASE)[0]
+    raise NotSupportedExtractionArchive("File format not supported for extraction")
 
 
 async def create_recursive_symlink(source, destination):
@@ -204,8 +216,7 @@ def get_mime_type(file_path):
         file_path = readlink(file_path)
     mime = Magic(mime=True)
     mime_type = mime.from_file(file_path)
-    mime_type = mime_type or "text/plain"
-    return mime_type
+    return mime_type or "text/plain"
 
 
 async def remove_excluded_files(fpath, ee):
@@ -221,7 +232,8 @@ async def join_files(opath):
     exists = False
     for file_ in files:
         if re_search(r"\.0+2$", file_) and await sync_to_async(
-            get_mime_type, f"{opath}/{file_}"
+            get_mime_type,
+            f"{opath}/{file_}",
         ) not in ["application/x-7z-compressed", "application/zip"]:
             exists = True
             final_name = file_.rsplit(".", 1)[0]
@@ -265,7 +277,7 @@ async def split_file(f_path, split_size, listener):
     if code == -9:
         listener.is_cancelled = True
         return False
-    elif code != 0:
+    if code != 0:
         try:
             stderr = stderr.decode().strip()
         except:
@@ -361,7 +373,7 @@ class SevenZ:
         if code == -9:
             self._listener.is_cancelled = True
             return False
-        elif code != 0:
+        if code != 0:
             try:
                 stderr = stderr.decode().strip()
             except:
@@ -400,7 +412,9 @@ class SevenZ:
         if self._listener.is_cancelled:
             return False
         self._listener.subproc = await create_subprocess_exec(
-            *cmd, stdout=PIPE, stderr=PIPE
+            *cmd,
+            stdout=PIPE,
+            stderr=PIPE,
         )
         await self._sevenz_progress()
         _, stderr = await self._listener.subproc.communicate()
@@ -410,15 +424,14 @@ class SevenZ:
         if code == -9:
             self._listener.is_cancelled = True
             return False
-        elif code == 0:
+        if code == 0:
             await clean_target(dl_path)
             return up_path
-        else:
-            if await aiopath.exists(up_path):
-                await remove(up_path)
-            try:
-                stderr = stderr.decode().strip()
-            except:
-                stderr = "Unable to decode the error!"
-            LOGGER.error(f"{stderr}. Unable to zip this path: {dl_path}")
-            return dl_path
+        if await aiopath.exists(up_path):
+            await remove(up_path)
+        try:
+            stderr = stderr.decode().strip()
+        except:
+            stderr = "Unable to decode the error!"
+        LOGGER.error(f"{stderr}. Unable to zip this path: {dl_path}")
+        return dl_path

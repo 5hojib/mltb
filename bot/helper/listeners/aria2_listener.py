@@ -1,18 +1,21 @@
-from aiofiles.os import remove, path as aiopath
+import contextlib
 from asyncio import sleep
 from time import time
 
-from ... import task_dict_lock, task_dict, LOGGER, intervals
-from ...core.config_manager import Config
-from ...core.torrent_manager import TorrentManager, is_metadata, aria2_name
-from ..ext_utils.bot_utils import bt_selection_buttons
-from ..ext_utils.files_utils import clean_unwanted
-from ..ext_utils.status_utils import get_task_by_gid
-from ..ext_utils.task_manager import stop_duplicate_check
-from ..mirror_leech_utils.status_utils.aria2_status import Aria2Status
-from ..telegram_helper.message_utils import (
-    send_message,
+from aiofiles.os import path as aiopath
+from aiofiles.os import remove
+
+from bot import LOGGER, intervals, task_dict, task_dict_lock
+from bot.core.config_manager import Config
+from bot.core.torrent_manager import TorrentManager, aria2_name, is_metadata
+from bot.helper.ext_utils.bot_utils import bt_selection_buttons
+from bot.helper.ext_utils.files_utils import clean_unwanted
+from bot.helper.ext_utils.status_utils import get_task_by_gid
+from bot.helper.ext_utils.task_manager import stop_duplicate_check
+from bot.helper.mirror_leech_utils.status_utils.aria2_status import Aria2Status
+from bot.helper.telegram_helper.message_utils import (
     delete_message,
+    send_message,
     update_status_message,
 )
 
@@ -34,15 +37,15 @@ async def _on_download_started(api, data):
                 while True:
                     await sleep(0.5)
                     if download.get("status", "") == "removed" or download.get(
-                        "followedBy", []
+                        "followedBy",
+                        [],
                     ):
                         await delete_message(meta)
                         break
                     download = await api.tellStatus(gid)
         return
-    else:
-        LOGGER.info(f"onDownloadStarted: {aria2_name(download)} - Gid: {gid}")
-        await sleep(1)
+    LOGGER.info(f"onDownloadStarted: {aria2_name(download)} - Gid: {gid}")
+    await sleep(1)
 
     await sleep(2)
     if task := await get_task_by_gid(gid):
@@ -79,10 +82,10 @@ async def _on_download_complete(api, data):
             task.listener.is_torrent = True
             if hasattr(task, "seeding") and task.seeding:
                 LOGGER.info(
-                    f"Cancelling Seed: {aria2_name(download)} onDownloadComplete"
+                    f"Cancelling Seed: {aria2_name(download)} onDownloadComplete",
                 )
                 await task.listener.on_upload_error(
-                    f"Seeding stopped with Ratio: {task.ratio()} and Time: {task.seeding_time()}"
+                    f"Seeding stopped with Ratio: {task.ratio()} and Time: {task.seeding_time()}",
                 )
                 await api.forceRemove(gid)
     else:
@@ -106,19 +109,17 @@ async def _on_bt_download_complete(api, data):
             for file_o in res:
                 f_path = file_o.get("path", "")
                 if file_o.get("selected", "") != "true" and await aiopath.exists(
-                    f_path
+                    f_path,
                 ):
-                    try:
+                    with contextlib.suppress(Exception):
                         await remove(f_path)
-                    except:
-                        pass
             await clean_unwanted(download.dir)
         if task.listener.seed:
             try:
                 await api.changeOption(gid, {"max-upload-limit": "0"})
             except Exception as e:
                 LOGGER.error(
-                    f"{e} You are not able to seed because you added global option seed-time=0 without adding specific seed_time for this torrent GID: {gid}"
+                    f"{e} You are not able to seed because you added global option seed-time=0 without adding specific seed_time for this torrent GID: {gid}",
                 )
         else:
             try:
@@ -136,7 +137,7 @@ async def _on_bt_download_complete(api, data):
         ):
             LOGGER.info(f"Cancelling Seed: {download.name}")
             await task.listener.on_upload_error(
-                f"Seeding stopped with Ratio: {task.ratio()} and Time: {task.seeding_time()}"
+                f"Seeding stopped with Ratio: {task.ratio()} and Time: {task.seeding_time()}",
             )
             await api.forceRemove(gid)
         elif (

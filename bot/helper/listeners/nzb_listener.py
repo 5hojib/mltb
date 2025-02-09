@@ -1,15 +1,9 @@
-from asyncio import sleep, gather
+from asyncio import gather, sleep
 
-from ... import (
-    intervals,
-    sabnzbd_client,
-    nzb_jobs,
-    nzb_listener_lock,
-    LOGGER,
-)
-from ..ext_utils.bot_utils import new_task
-from ..ext_utils.status_utils import get_task_by_gid
-from ..ext_utils.task_manager import stop_duplicate_check
+from bot import LOGGER, intervals, nzb_jobs, nzb_listener_lock, sabnzbd_client
+from bot.helper.ext_utils.bot_utils import new_task
+from bot.helper.ext_utils.status_utils import get_task_by_gid
+from bot.helper.ext_utils.task_manager import stop_duplicate_check
 
 
 async def _remove_job(nzo_id, mid):

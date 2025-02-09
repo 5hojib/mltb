@@ -1,24 +1,21 @@
-from aiofiles.os import remove, path as aiopath
 from asyncio import gather, sleep
-from sabnzbdapi.exception import NotLoggedIn, LoginFailed
 
-from .... import (
-    task_dict,
-    task_dict_lock,
-    sabnzbd_client,
-    LOGGER,
-)
-from ....core.config_manager import Config
-from ...ext_utils.task_manager import check_running_tasks
-from ...listeners.nzb_listener import on_download_start
-from ...ext_utils.db_handler import database
-from ...ext_utils.bot_utils import bt_selection_buttons
-from ...mirror_leech_utils.status_utils.nzb_status import SabnzbdStatus
-from ...telegram_helper.message_utils import (
-    send_status_message,
-    send_message,
+from aiofiles.os import path as aiopath
+from aiofiles.os import remove
+
+from bot import LOGGER, sabnzbd_client, task_dict, task_dict_lock
+from bot.core.config_manager import Config
+from bot.helper.ext_utils.bot_utils import bt_selection_buttons
+from bot.helper.ext_utils.db_handler import database
+from bot.helper.ext_utils.task_manager import check_running_tasks
+from bot.helper.listeners.nzb_listener import on_download_start
+from bot.helper.mirror_leech_utils.status_utils.nzb_status import SabnzbdStatus
+from bot.helper.telegram_helper.message_utils import (
     delete_message,
+    send_message,
+    send_status_message,
 )
+from sabnzbdapi.exception import LoginFailed, NotLoggedIn
 
 
 async def add_servers():
@@ -32,7 +29,7 @@ async def add_servers():
                 Config.USENET_SERVERS.append(server)
         if Config.DATABASE_URL:
             tasks.append(
-                database.update_config({"USENET_SERVERS": Config.USENET_SERVERS})
+                database.update_config({"USENET_SERVERS": Config.USENET_SERVERS}),
             )
         if tasks:
             try:
@@ -40,23 +37,24 @@ async def add_servers():
             except LoginFailed as e:
                 raise e
     elif not res and (
-        Config.USENET_SERVERS
-        and (
-            not Config.USENET_SERVERS[0]["host"]
-            or not Config.USENET_SERVERS[0]["username"]
-            or not Config.USENET_SERVERS[0]["password"]
+        (
+            Config.USENET_SERVERS
+            and (
+                not Config.USENET_SERVERS[0]["host"]
+                or not Config.USENET_SERVERS[0]["username"]
+                or not Config.USENET_SERVERS[0]["password"]
+            )
         )
         or not Config.USENET_SERVERS
     ):
         raise NotLoggedIn("Set USENET_SERVERS in bsetting or config!")
-    else:
-        if tasks := [
-            sabnzbd_client.add_server(server) for server in Config.USENET_SERVERS
-        ]:
-            try:
-                await gather(*tasks)
-            except LoginFailed as e:
-                raise e
+    elif tasks := [
+        sabnzbd_client.add_server(server) for server in Config.USENET_SERVERS
+    ]:
+        try:
+            await gather(*tasks)
+        except LoginFailed as e:
+            raise e
 
 
 async def add_nzb(listener, path):
@@ -109,7 +107,9 @@ async def add_nzb(listener, path):
 
         async with task_dict_lock:
             task_dict[listener.mid] = SabnzbdStatus(
-                listener, job_id, queued=add_to_queue
+                listener,
+                job_id,
+                queued=add_to_queue,
             )
         await on_download_start(job_id)
 
@@ -128,7 +128,7 @@ async def add_nzb(listener, path):
                     nzb_info = await sabnzbd_client.get_downloads(nzo_ids=job_id)
                     if nzb_info["queue"]["slots"]:
                         if not nzb_info["queue"]["slots"][0]["filename"].startswith(
-                            "Trying"
+                            "Trying",
                         ):
                             await delete_message(meta)
                             break
@@ -153,7 +153,7 @@ async def add_nzb(listener, path):
 
             await sabnzbd_client.resume_job(job_id)
             LOGGER.info(
-                f"Start Queued Download from Sabnzbd: {name} - Job_id: {job_id}"
+                f"Start Queued Download from Sabnzbd: {name} - Job_id: {job_id}",
             )
     except Exception as e:
         await listener.on_download_error(f"{e}")

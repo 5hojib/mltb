@@ -1,8 +1,8 @@
-from asyncio import sleep, gather
+from asyncio import gather, sleep
 
-from .... import LOGGER, qb_torrents, qb_listener_lock
-from ....core.torrent_manager import TorrentManager
-from ...ext_utils.status_utils import (
+from bot import LOGGER, qb_listener_lock, qb_torrents
+from bot.core.torrent_manager import TorrentManager
+from bot.helper.ext_utils.status_utils import (
     MirrorStatus,
     get_readable_file_size,
     get_readable_time,
@@ -41,8 +41,7 @@ class QbittorrentStatus:
     def name(self):
         if self._info.state in ["metaDL", "checkingResumeData"]:
             return f"[METADATA]{self.listener.name}"
-        else:
-            return self.listener.name
+        return self.listener.name
 
     def size(self):
         return get_readable_file_size(self._info.size)
@@ -55,16 +54,15 @@ class QbittorrentStatus:
         state = self._info.state
         if state == "queuedDL" or self.queued:
             return MirrorStatus.STATUS_QUEUEDL
-        elif state == "queuedUP":
+        if state == "queuedUP":
             return MirrorStatus.STATUS_QUEUEUP
-        elif state in ["stoppedDL", "stoppedUP"]:
+        if state in ["stoppedDL", "stoppedUP"]:
             return MirrorStatus.STATUS_PAUSED
-        elif state in ["checkingUP", "checkingDL"]:
+        if state in ["checkingUP", "checkingDL"]:
             return MirrorStatus.STATUS_CHECK
-        elif state in ["stalledUP", "uploading"] and self.seeding:
+        if state in ["stalledUP", "uploading"] and self.seeding:
             return MirrorStatus.STATUS_SEED
-        else:
-            return MirrorStatus.STATUS_DOWNLOAD
+        return MirrorStatus.STATUS_DOWNLOAD
 
     def seeders_num(self):
         return self._info.num_seeds
@@ -109,7 +107,7 @@ class QbittorrentStatus:
                 self.listener.on_download_error(msg),
                 TorrentManager.qbittorrent.torrents.delete([self._info.hash], True),
                 TorrentManager.qbittorrent.torrents.delete_tags(
-                    tags=[self._info.tags[0]]
+                    tags=[self._info.tags[0]],
                 ),
             )
             async with qb_listener_lock:

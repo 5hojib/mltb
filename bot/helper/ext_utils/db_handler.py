@@ -1,13 +1,14 @@
+from importlib import import_module
+
 from aiofiles import open as aiopen
 from aiofiles.os import path as aiopath
-from importlib import import_module
 from motor.motor_asyncio import AsyncIOMotorClient
-from pymongo.server_api import ServerApi
 from pymongo.errors import PyMongoError
+from pymongo.server_api import ServerApi
 
-from ... import LOGGER, user_data, rss_dict, qbit_options
-from ...core.mltb_client import TgClient
-from ...core.config_manager import Config
+from bot import LOGGER, qbit_options, rss_dict, user_data
+from bot.core.config_manager import Config
+from bot.core.mltb_client import TgClient
 
 
 class DbManager:
@@ -21,7 +22,8 @@ class DbManager:
             if self._conn is not None:
                 await self._conn.close()
             self._conn = AsyncIOMotorClient(
-                Config.DATABASE_URL, server_api=ServerApi("1")
+                Config.DATABASE_URL,
+                server_api=ServerApi("1"),
             )
             self.db = self._conn.mltb
             self._return = False
@@ -47,35 +49,45 @@ class DbManager:
             if not key.startswith("__")
         }
         await self.db.settings.deployConfig.replace_one(
-            {"_id": TgClient.ID}, config_file, upsert=True
+            {"_id": TgClient.ID},
+            config_file,
+            upsert=True,
         )
 
     async def update_config(self, dict_):
         if self._return:
             return
         await self.db.settings.config.update_one(
-            {"_id": TgClient.ID}, {"$set": dict_}, upsert=True
+            {"_id": TgClient.ID},
+            {"$set": dict_},
+            upsert=True,
         )
 
     async def update_aria2(self, key, value):
         if self._return:
             return
         await self.db.settings.aria2c.update_one(
-            {"_id": TgClient.ID}, {"$set": {key: value}}, upsert=True
+            {"_id": TgClient.ID},
+            {"$set": {key: value}},
+            upsert=True,
         )
 
     async def update_qbittorrent(self, key, value):
         if self._return:
             return
         await self.db.settings.qbittorrent.update_one(
-            {"_id": TgClient.ID}, {"$set": {key: value}}, upsert=True
+            {"_id": TgClient.ID},
+            {"$set": {key: value}},
+            upsert=True,
         )
 
     async def save_qbit_settings(self):
         if self._return:
             return
         await self.db.settings.qbittorrent.update_one(
-            {"_id": TgClient.ID}, {"$set": qbit_options}, upsert=True
+            {"_id": TgClient.ID},
+            {"$set": qbit_options},
+            upsert=True,
         )
 
     async def update_private_file(self, path):
@@ -88,7 +100,9 @@ class DbManager:
             pf_bin = ""
         path = path.replace(".", "__")
         await self.db.settings.files.update_one(
-            {"_id": TgClient.ID}, {"$set": {path: pf_bin}}, upsert=True
+            {"_id": TgClient.ID},
+            {"$set": {path: pf_bin}},
+            upsert=True,
         )
         if path == "config.py":
             await self.update_deploy_config()
@@ -99,7 +113,9 @@ class DbManager:
         async with aiopen("sabnzbd/SABnzbd.ini", "rb+") as pf:
             nzb_conf = await pf.read()
         await self.db.settings.nzb.replace_one(
-            {"_id": TgClient.ID}, {"SABnzbd__ini": nzb_conf}, upsert=True
+            {"_id": TgClient.ID},
+            {"SABnzbd__ini": nzb_conf},
+            upsert=True,
         )
 
     async def update_user_data(self, user_id):
@@ -123,7 +139,9 @@ class DbManager:
         else:
             doc_bin = ""
         await self.db.users.update_one(
-            {"_id": user_id}, {"$set": {key: doc_bin}}, upsert=True
+            {"_id": user_id},
+            {"$set": {key: doc_bin}},
+            upsert=True,
         )
 
     async def rss_update_all(self):
@@ -131,14 +149,18 @@ class DbManager:
             return
         for user_id in list(rss_dict.keys()):
             await self.db.rss[TgClient.ID].replace_one(
-                {"_id": user_id}, rss_dict[user_id], upsert=True
+                {"_id": user_id},
+                rss_dict[user_id],
+                upsert=True,
             )
 
     async def rss_update(self, user_id):
         if self._return:
             return
         await self.db.rss[TgClient.ID].replace_one(
-            {"_id": user_id}, rss_dict[user_id], upsert=True
+            {"_id": user_id},
+            rss_dict[user_id],
+            upsert=True,
         )
 
     async def rss_delete(self, user_id):
@@ -150,7 +172,7 @@ class DbManager:
         if self._return:
             return
         await self.db.tasks[TgClient.ID].insert_one(
-            {"_id": link, "cid": cid, "tag": tag}
+            {"_id": link, "cid": cid, "tag": tag},
         )
 
     async def rm_complete_task(self, link):

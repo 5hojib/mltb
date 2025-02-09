@@ -1,23 +1,27 @@
-from aiofiles import open as aiopen
-from aiofiles.os import path as aiopath
-from asyncio import wait_for, Event, gather
+from asyncio import Event, gather, wait_for
 from configparser import RawConfigParser
 from functools import partial
 from json import loads
-from pyrogram.filters import regex, user
-from pyrogram.handlers import CallbackQueryHandler
 from time import time
 
-from .... import LOGGER
-from ....core.config_manager import Config
-from ...ext_utils.bot_utils import cmd_exec, update_user_ldata, new_task
-from ...ext_utils.db_handler import database
-from ...ext_utils.status_utils import get_readable_file_size, get_readable_time
-from ...telegram_helper.button_build import ButtonMaker
-from ...telegram_helper.message_utils import (
-    send_message,
-    edit_message,
+from aiofiles import open as aiopen
+from aiofiles.os import path as aiopath
+from pyrogram.filters import regex, user
+from pyrogram.handlers import CallbackQueryHandler
+
+from bot import LOGGER
+from bot.core.config_manager import Config
+from bot.helper.ext_utils.bot_utils import cmd_exec, new_task, update_user_ldata
+from bot.helper.ext_utils.db_handler import database
+from bot.helper.ext_utils.status_utils import (
+    get_readable_file_size,
+    get_readable_time,
+)
+from bot.helper.telegram_helper.button_build import ButtonMaker
+from bot.helper.telegram_helper.message_utils import (
     delete_message,
+    edit_message,
+    send_message,
 )
 
 LIST_LIMIT = 6
@@ -158,7 +162,8 @@ class RcloneList:
         pfunc = partial(path_updates, obj=self)
         handler = self.listener.client.add_handler(
             CallbackQueryHandler(
-                pfunc, filters=regex("^rcq") & user(self.listener.user_id)
+                pfunc,
+                filters=regex("^rcq") & user(self.listener.user_id),
             ),
             group=-1,
         )
@@ -175,7 +180,9 @@ class RcloneList:
     async def _send_list_message(self, msg, button):
         if not self.listener.is_cancelled:
             if self._reply_to is None:
-                self._reply_to = await send_message(self.listener.message, msg, button)
+                self._reply_to = await send_message(
+                    self.listener.message, msg, button
+                )
             else:
                 await edit_message(self._reply_to, msg, button)
 
@@ -189,7 +196,7 @@ class RcloneList:
         page = (self.iter_start / LIST_LIMIT) + 1 if self.iter_start != 0 else 1
         buttons = ButtonMaker()
         for index, idict in enumerate(
-            self.path_list[self.iter_start : LIST_LIMIT + self.iter_start]
+            self.path_list[self.iter_start : LIST_LIMIT + self.iter_start],
         ):
             orig_index = index + self.iter_start
             name = idict["Path"]
@@ -211,11 +218,15 @@ class RcloneList:
         if self.list_status == "rcd":
             if self.item_type == "--dirs-only":
                 buttons.data_button(
-                    "Files", "rcq itype --files-only", position="footer"
+                    "Files",
+                    "rcq itype --files-only",
+                    position="footer",
                 )
             else:
                 buttons.data_button(
-                    "Folders", "rcq itype --dirs-only", position="footer"
+                    "Folders",
+                    "rcq itype --dirs-only",
+                    position="footer",
                 )
         if self.list_status == "rcu" or len(self.path_list) > 0:
             buttons.data_button("Choose Current Path", "rcq cur", position="footer")
@@ -230,7 +241,11 @@ class RcloneList:
             buttons.data_button("Clear Selection", "rcq clear", position="footer")
         if self.list_status == "rcu":
             buttons.data_button("Set as Default Path", "rcq def", position="footer")
-        if self.path or len(self._sections) > 1 or self._rc_user and self._rc_owner:
+        if (
+            self.path
+            or len(self._sections) > 1
+            or (self._rc_user and self._rc_owner)
+        ):
             buttons.data_button("Back", "rcq back pa", position="footer")
         if self.path:
             buttons.data_button("Back To Root", "rcq root", position="footer")
@@ -249,7 +264,9 @@ class RcloneList:
             msg += f" | Page: {int(page)}/{pages} | Page Step: {self.page_step}"
         msg += f"\n\nItem Type: {self.item_type}\nConfig Path: {self.config_path}"
         msg += f"\nCurrent Path: <code>{self.remote}{self.path}</code>"
-        msg += f"\nTimeout: {get_readable_time(self._timeout - (time() - self._time))}"
+        msg += (
+            f"\nTimeout: {get_readable_time(self._timeout - (time() - self._time))}"
+        )
         await self._send_list_message(msg, button)
 
     async def get_path(self, itype=""):
@@ -297,7 +314,7 @@ class RcloneList:
             if not err:
                 err = "Use <code>/shell cat rlog.txt</code> to see more information"
             LOGGER.error(
-                f"While rclone listing. Path: {self.remote}{self.path}. Stderr: {err}"
+                f"While rclone listing. Path: {self.remote}{self.path}. Stderr: {err}",
             )
             self.remote = err[:4000]
             self.path = ""
@@ -305,7 +322,7 @@ class RcloneList:
 
     async def list_remotes(self):
         config = RawConfigParser()
-        async with aiopen(self.config_path, "r") as f:
+        async with aiopen(self.config_path) as f:
             contents = await f.read()
             config.read_string(contents)
         if config.has_section("combine"):
@@ -321,9 +338,7 @@ class RcloneList:
                 else "\nTransfer Type: <i>Upload</i>"
             )
             msg += f"\nConfig Path: {self.config_path}"
-            msg += (
-                f"\nTimeout: {get_readable_time(self._timeout - (time() - self._time))}"
-            )
+            msg += f"\nTimeout: {get_readable_time(self._timeout - (time() - self._time))}"
             buttons = ButtonMaker()
             for remote in self._sections:
                 buttons.data_button(remote, f"rcq re {remote}:")
@@ -340,9 +355,7 @@ class RcloneList:
                 if self.list_status == "rcd"
                 else "\nTransfer Type: Upload"
             )
-            msg += (
-                f"\nTimeout: {get_readable_time(self._timeout - (time() - self._time))}"
-            )
+            msg += f"\nTimeout: {get_readable_time(self._timeout - (time() - self._time))}"
             buttons = ButtonMaker()
             buttons.data_button("Owner Config", "rcq owner")
             buttons.data_button("My Config", "rcq user")
@@ -350,7 +363,9 @@ class RcloneList:
             button = buttons.build_menu(2)
             await self._send_list_message(msg, button)
         else:
-            self.config_path = "rclone.conf" if self._rc_owner else self.user_rcc_path
+            self.config_path = (
+                "rclone.conf" if self._rc_owner else self.user_rcc_path
+            )
             await self.list_remotes()
 
     async def back_from_path(self):
@@ -367,7 +382,8 @@ class RcloneList:
         self.list_status = status
         if config_path is None:
             self._rc_user, self._rc_owner = await gather(
-                aiopath.exists(self.user_rcc_path), aiopath.exists("rclone.conf")
+                aiopath.exists(self.user_rcc_path),
+                aiopath.exists("rclone.conf"),
             )
             if not self._rc_owner and not self._rc_user:
                 self.event.set()

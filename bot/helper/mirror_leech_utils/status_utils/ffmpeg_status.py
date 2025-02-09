@@ -1,7 +1,9 @@
-from .... import LOGGER
-from ...ext_utils.status_utils import (
-    get_readable_file_size,
+import contextlib
+
+from bot import LOGGER
+from bot.helper.ext_utils.status_utils import (
     MirrorStatus,
+    get_readable_file_size,
     get_readable_time,
 )
 
@@ -38,12 +40,11 @@ class FFmpegStatus:
     def status(self):
         if self._cstatus == "Convert":
             return MirrorStatus.STATUS_CONVERT
-        elif self._cstatus == "Split":
+        if self._cstatus == "Split":
             return MirrorStatus.STATUS_SPLIT
-        elif self._cstatus == "Sample Video":
+        if self._cstatus == "Sample Video":
             return MirrorStatus.STATUS_SAMVID
-        else:
-            return MirrorStatus.STATUS_FFMPEG
+        return MirrorStatus.STATUS_FFMPEG
 
     def task(self):
         return self
@@ -55,8 +56,6 @@ class FFmpegStatus:
             self.listener.subproc is not None
             and self.listener.subproc.returncode is None
         ):
-            try:
+            with contextlib.suppress(Exception):
                 self.listener.subproc.kill()
-            except:
-                pass
         await self.listener.on_upload_error(f"{self._cstatus} stopped by user!")

@@ -1,21 +1,23 @@
 from uvloop import install
 
 install()
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from asyncio import Lock, new_event_loop, set_event_loop
 from logging import (
-    getLogger,
+    ERROR,
+    INFO,
+    WARNING,
     FileHandler,
     StreamHandler,
-    INFO,
     basicConfig,
-    WARNING,
-    ERROR,
+    getLogger,
 )
-from sabnzbdapi import SabnzbdClient
-from time import time
-from tzlocal import get_localzone
 from os import cpu_count
+from time import time
+
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from tzlocal import get_localzone
+
+from sabnzbdapi import SabnzbdClient
 
 getLogger("requests").setLevel(WARNING)
 getLogger("urllib3").setLevel(WARNING)

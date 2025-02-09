@@ -1,44 +1,48 @@
-from aiofiles.os import path as aiopath
 from base64 import b64encode
 from re import match as re_match
 
-from .. import LOGGER, bot_loop, task_dict_lock, DOWNLOAD_DIR
-from ..helper.ext_utils.bot_utils import (
+from aiofiles.os import path as aiopath
+
+from bot import DOWNLOAD_DIR, LOGGER, bot_loop, task_dict_lock
+from bot.helper.ext_utils.bot_utils import (
+    COMMAND_USAGE,
+    arg_parser,
     get_content_type,
     sync_to_async,
-    arg_parser,
-    COMMAND_USAGE,
 )
-from ..helper.ext_utils.exceptions import DirectDownloadLinkException
-from ..helper.ext_utils.links_utils import (
-    is_url,
-    is_magnet,
+from bot.helper.ext_utils.exceptions import DirectDownloadLinkException
+from bot.helper.ext_utils.links_utils import (
+    is_gdrive_id,
     is_gdrive_link,
+    is_magnet,
     is_rclone_path,
     is_telegram_link,
-    is_gdrive_id,
+    is_url,
 )
-from ..helper.listeners.task_listener import TaskListener
-from ..helper.mirror_leech_utils.download_utils.aria2_download import (
+from bot.helper.listeners.task_listener import TaskListener
+from bot.helper.mirror_leech_utils.download_utils.aria2_download import (
     add_aria2_download,
 )
-from ..helper.mirror_leech_utils.download_utils.direct_downloader import (
+from bot.helper.mirror_leech_utils.download_utils.direct_downloader import (
     add_direct_download,
 )
-from ..helper.mirror_leech_utils.download_utils.direct_link_generator import (
+from bot.helper.mirror_leech_utils.download_utils.direct_link_generator import (
     direct_link_generator,
 )
-from ..helper.mirror_leech_utils.download_utils.gd_download import add_gd_download
-from ..helper.mirror_leech_utils.download_utils.jd_download import add_jd_download
-from ..helper.mirror_leech_utils.download_utils.qbit_download import add_qb_torrent
-from ..helper.mirror_leech_utils.download_utils.nzb_downloader import add_nzb
-from ..helper.mirror_leech_utils.download_utils.rclone_download import (
+from bot.helper.mirror_leech_utils.download_utils.gd_download import add_gd_download
+from bot.helper.mirror_leech_utils.download_utils.jd_download import add_jd_download
+from bot.helper.mirror_leech_utils.download_utils.nzb_downloader import add_nzb
+from bot.helper.mirror_leech_utils.download_utils.qbit_download import add_qb_torrent
+from bot.helper.mirror_leech_utils.download_utils.rclone_download import (
     add_rclone_download,
 )
-from ..helper.mirror_leech_utils.download_utils.telegram_download import (
+from bot.helper.mirror_leech_utils.download_utils.telegram_download import (
     TelegramDownloadHelper,
 )
-from ..helper.telegram_helper.message_utils import send_message, get_tg_link_message
+from bot.helper.telegram_helper.message_utils import (
+    get_tg_link_message,
+    send_message,
+)
 
 
 class Mirror(TaskListener):
@@ -135,7 +139,7 @@ class Mirror(TaskListener):
         self.thumbnail_layout = args["-tl"]
         self.as_doc = args["-doc"]
         self.as_med = args["-med"]
-        self.folder_name = f"/{args["-m"]}" if len(args["-m"]) > 0 else ""
+        self.folder_name = f"/{args['-m']}" if len(args["-m"]) > 0 else ""
         self.bot_trans = args["-bt"]
         self.user_trans = args["-ut"]
 
@@ -201,7 +205,7 @@ class Mirror(TaskListener):
                                 self.folder_name: {
                                     "total": self.multi,
                                     "tasks": {self.mid},
-                                }
+                                },
                             }
                 elif self.same_dir:
                     async with task_dict_lock:
@@ -238,7 +242,8 @@ class Mirror(TaskListener):
             b_msg.append(f"{self.bulk[0]} -i {len(self.bulk)} {self.options}")
             nextmsg = await send_message(self.message, " ".join(b_msg))
             nextmsg = await self.client.get_messages(
-                chat_id=self.message.chat.id, message_ids=nextmsg.id
+                chat_id=self.message.chat.id,
+                message_ids=nextmsg.id,
             )
             if self.message.from_user:
                 nextmsg.from_user = self.user
@@ -284,20 +289,22 @@ class Mirror(TaskListener):
                 file_ = None
 
         if (
-            not self.link
-            and file_ is None
-            or is_telegram_link(self.link)
-            and reply_to is None
-            or file_ is None
-            and not is_url(self.link)
-            and not is_magnet(self.link)
-            and not await aiopath.exists(self.link)
-            and not is_rclone_path(self.link)
-            and not is_gdrive_id(self.link)
-            and not is_gdrive_link(self.link)
+            (not self.link and file_ is None)
+            or (is_telegram_link(self.link) and reply_to is None)
+            or (
+                file_ is None
+                and not is_url(self.link)
+                and not is_magnet(self.link)
+                and not await aiopath.exists(self.link)
+                and not is_rclone_path(self.link)
+                and not is_gdrive_id(self.link)
+                and not is_gdrive_link(self.link)
+            )
         ):
             await send_message(
-                self.message, COMMAND_USAGE["mirror"][0], COMMAND_USAGE["mirror"][1]
+                self.message,
+                COMMAND_USAGE["mirror"][0],
+                COMMAND_USAGE["mirror"][1],
             )
             await self.remove_from_same_dir()
             return
@@ -324,7 +331,9 @@ class Mirror(TaskListener):
             and not is_gdrive_id(self.link)
         ):
             content_type = await get_content_type(self.link)
-            if content_type is None or re_match(r"text/html|text/plain", content_type):
+            if content_type is None or re_match(
+                r"text/html|text/plain", content_type
+            ):
                 try:
                     self.link = await sync_to_async(direct_link_generator, self.link)
                     if isinstance(self.link, tuple):
@@ -342,7 +351,9 @@ class Mirror(TaskListener):
 
         if file_ is not None:
             await TelegramDownloadHelper(self).add_download(
-                reply_to, f"{path}/", session
+                reply_to,
+                f"{path}/",
+                session,
             )
         elif isinstance(self.link, dict):
             await add_direct_download(self, path)
@@ -361,9 +372,7 @@ class Mirror(TaskListener):
             pssw = args["-ap"]
             if ussr or pssw:
                 auth = f"{ussr}:{pssw}"
-                headers += (
-                    f" authorization: Basic {b64encode(auth.encode()).decode('ascii')}"
-                )
+                headers += f" authorization: Basic {b64encode(auth.encode()).decode('ascii')}"
             await add_aria2_download(self, path, headers, ratio, seed_time)
 
 
@@ -389,15 +398,17 @@ async def leech(client, message):
 
 async def qb_leech(client, message):
     bot_loop.create_task(
-        Mirror(client, message, is_qbit=True, is_leech=True).new_event()
+        Mirror(client, message, is_qbit=True, is_leech=True).new_event(),
     )
 
 
 async def jd_leech(client, message):
-    bot_loop.create_task(Mirror(client, message, is_leech=True, is_jd=True).new_event())
+    bot_loop.create_task(
+        Mirror(client, message, is_leech=True, is_jd=True).new_event()
+    )
 
 
 async def nzb_leech(client, message):
     bot_loop.create_task(
-        Mirror(client, message, is_leech=True, is_nzb=True).new_event()
+        Mirror(client, message, is_leech=True, is_nzb=True).new_event(),
     )

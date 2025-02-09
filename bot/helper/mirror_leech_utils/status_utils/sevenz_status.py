@@ -1,9 +1,10 @@
+import contextlib
 from time import time
 
-from .... import LOGGER
-from ...ext_utils.status_utils import (
-    get_readable_file_size,
+from bot import LOGGER
+from bot.helper.ext_utils.status_utils import (
     MirrorStatus,
+    get_readable_file_size,
     get_readable_time,
 )
 
@@ -50,8 +51,7 @@ class SevenZStatus:
     def status(self):
         if self._cstatus == "Extract":
             return MirrorStatus.STATUS_EXTRACT
-        else:
-            return MirrorStatus.STATUS_ARCHIVE
+        return MirrorStatus.STATUS_ARCHIVE
 
     def task(self):
         return self
@@ -63,8 +63,6 @@ class SevenZStatus:
             self.listener.subproc is not None
             and self.listener.subproc.returncode is None
         ):
-            try:
+            with contextlib.suppress(Exception):
                 self.listener.subproc.kill()
-            except:
-                pass
         await self.listener.on_upload_error(f"{self._cstatus} stopped by user!")

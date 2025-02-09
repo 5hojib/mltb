@@ -1,7 +1,9 @@
-from pyrogram import Client, enums
 from asyncio import Lock
 
-from .. import LOGGER
+from pyrogram import Client, enums
+
+from bot import LOGGER
+
 from .config_manager import Config
 
 

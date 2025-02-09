@@ -1,14 +1,19 @@
-from aiofiles.os import remove, path as aiopath
-from aiofiles import open as aiopen
 from base64 import b64encode
 
-from .... import task_dict_lock, task_dict, LOGGER
-from ....core.config_manager import Config
-from ....core.torrent_manager import TorrentManager, is_metadata, aria2_name
-from ...ext_utils.bot_utils import bt_selection_buttons
-from ...ext_utils.task_manager import check_running_tasks
-from ...mirror_leech_utils.status_utils.aria2_status import Aria2Status
-from ...telegram_helper.message_utils import send_status_message, send_message
+from aiofiles import open as aiopen
+from aiofiles.os import path as aiopath
+from aiofiles.os import remove
+
+from bot import LOGGER, task_dict, task_dict_lock
+from bot.core.config_manager import Config
+from bot.core.torrent_manager import TorrentManager, aria2_name, is_metadata
+from bot.helper.ext_utils.bot_utils import bt_selection_buttons
+from bot.helper.ext_utils.task_manager import check_running_tasks
+from bot.helper.mirror_leech_utils.status_utils.aria2_status import Aria2Status
+from bot.helper.telegram_helper.message_utils import (
+    send_message,
+    send_status_message,
+)
 
 
 async def add_aria2_download(listener, dpath, header, ratio, seed_time):
@@ -41,7 +46,8 @@ async def add_aria2_download(listener, dpath, header, ratio, seed_time):
             """gid = await TorrentManager.aria2.add_torrent(path=listener.link, options=a2c_opt)"""
         else:
             gid = await TorrentManager.aria2.addUri(
-                uris=[listener.link], options=a2c_opt
+                uris=[listener.link],
+                options=a2c_opt,
             )
     except Exception as e:
         LOGGER.info(f"Aria2c Download Error: {e}")

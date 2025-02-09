@@ -1,14 +1,15 @@
 from asyncio import sleep
-from pyrogram.errors import FloodWait, FloodPremiumWait
 from re import match as re_match
 from time import time
 
-from ... import LOGGER, status_dict, task_dict_lock, intervals
-from ...core.config_manager import Config
-from ...core.mltb_client import TgClient
-from ..ext_utils.bot_utils import SetInterval
-from ..ext_utils.exceptions import TgLinkException
-from ..ext_utils.status_utils import get_readable_message
+from pyrogram.errors import FloodPremiumWait, FloodWait
+
+from bot import LOGGER, intervals, status_dict, task_dict_lock
+from bot.core.config_manager import Config
+from bot.core.mltb_client import TgClient
+from bot.helper.ext_utils.bot_utils import SetInterval
+from bot.helper.ext_utils.exceptions import TgLinkException
+from bot.helper.ext_utils.status_utils import get_readable_message
 
 
 async def send_message(message, text, buttons=None, block=True):
@@ -52,7 +53,10 @@ async def edit_message(message, text, buttons=None, block=True):
 async def send_file(message, file, caption=""):
     try:
         return await message.reply_document(
-            document=file, quote=True, caption=caption, disable_notification=True
+            document=file,
+            quote=True,
+            caption=caption,
+            disable_notification=True,
         )
     except FloodWait as f:
         LOGGER.warning(str(f))
@@ -113,15 +117,19 @@ async def get_tg_link_message(link):
     if link.startswith("https://t.me/"):
         private = False
         msg = re_match(
-            r"https:\/\/t\.me\/(?:c\/)?([^\/]+)(?:\/[^\/]+)?\/([0-9-]+)", link
+            r"https:\/\/t\.me\/(?:c\/)?([^\/]+)(?:\/[^\/]+)?\/([0-9-]+)",
+            link,
         )
     else:
         private = True
         msg = re_match(
-            r"tg:\/\/openmessage\?user_id=([0-9]+)&message_id=([0-9-]+)", link
+            r"tg:\/\/openmessage\?user_id=([0-9]+)&message_id=([0-9-]+)",
+            link,
         )
         if not TgClient.user:
-            raise TgLinkException("USER_SESSION_STRING required for this private link!")
+            raise TgLinkException(
+                "USER_SESSION_STRING required for this private link!"
+            )
 
     chat = msg[1]
     msg_id = msg[2]
@@ -150,7 +158,9 @@ async def get_tg_link_message(link):
 
     if not private:
         try:
-            message = await TgClient.bot.get_messages(chat_id=chat, message_ids=msg_id)
+            message = await TgClient.bot.get_messages(
+                chat_id=chat, message_ids=msg_id
+            )
             if message.empty:
                 private = True
         except Exception as e:
@@ -160,19 +170,20 @@ async def get_tg_link_message(link):
 
     if not private:
         return (links, "bot") if links else (message, "bot")
-    elif TgClient.user:
+    if TgClient.user:
         try:
             user_message = await TgClient.user.get_messages(
-                chat_id=chat, message_ids=msg_id
+                chat_id=chat,
+                message_ids=msg_id,
             )
         except Exception as e:
             raise TgLinkException(
-                f"You don't have access to this chat!. ERROR: {e}"
+                f"You don't have access to this chat!. ERROR: {e}",
             ) from e
         if not user_message.empty:
             return (links, "user") if links else (user_message, "user")
-    else:
-        raise TgLinkException("Private: Please report!")
+        return None
+    raise TgLinkException("Private: Please report!")
 
 
 async def update_status_message(sid, force=False):
@@ -192,7 +203,11 @@ async def update_status_message(sid, force=False):
         is_user = status_dict[sid]["is_user"]
         page_step = status_dict[sid]["page_step"]
         text, buttons = await get_readable_message(
-            sid, is_user, page_no, status, page_step
+            sid,
+            is_user,
+            page_no,
+            status,
+            page_step,
         )
         if text is None:
             del status_dict[sid]
@@ -202,7 +217,10 @@ async def update_status_message(sid, force=False):
             return
         if text != status_dict[sid]["message"].text:
             message = await edit_message(
-                status_dict[sid]["message"], text, buttons, block=False
+                status_dict[sid]["message"],
+                text,
+                buttons,
+                block=False,
             )
             if isinstance(message, str):
                 if message.startswith("Telegram says: [40"):
@@ -212,7 +230,7 @@ async def update_status_message(sid, force=False):
                         del intervals["status"][sid]
                 else:
                     LOGGER.error(
-                        f"Status with id: {sid} haven't been updated. Error: {message}"
+                        f"Status with id: {sid} haven't been updated. Error: {message}",
                     )
                 return
             status_dict[sid]["message"].text = text
@@ -230,7 +248,11 @@ async def send_status_message(msg, user_id=0):
             status = status_dict[sid]["status"]
             page_step = status_dict[sid]["page_step"]
             text, buttons = await get_readable_message(
-                sid, is_user, page_no, status, page_step
+                sid,
+                is_user,
+                page_no,
+                status,
+                page_step,
             )
             if text is None:
                 del status_dict[sid]
@@ -242,7 +264,7 @@ async def send_status_message(msg, user_id=0):
             message = await send_message(msg, text, buttons, block=False)
             if isinstance(message, str):
                 LOGGER.error(
-                    f"Status with id: {sid} haven't been sent. Error: {message}"
+                    f"Status with id: {sid} haven't been sent. Error: {message}",
                 )
                 return
             await delete_message(old_message)
@@ -255,7 +277,7 @@ async def send_status_message(msg, user_id=0):
             message = await send_message(msg, text, buttons, block=False)
             if isinstance(message, str):
                 LOGGER.error(
-                    f"Status with id: {sid} haven't been sent. Error: {message}"
+                    f"Status with id: {sid} haven't been sent. Error: {message}",
                 )
                 return
             message.text = text
@@ -269,5 +291,7 @@ async def send_status_message(msg, user_id=0):
             }
         if not intervals["status"].get(sid) and not is_user:
             intervals["status"][sid] = SetInterval(
-                Config.STATUS_UPDATE_INTERVAL, update_status_message, sid
+                Config.STATUS_UPDATE_INTERVAL,
+                update_status_message,
+                sid,
             )

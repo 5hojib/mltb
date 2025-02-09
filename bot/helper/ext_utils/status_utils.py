@@ -1,11 +1,13 @@
+import contextlib
+from asyncio import gather, iscoroutinefunction
 from html import escape
-from psutil import virtual_memory, cpu_percent, disk_usage
 from time import time
-from asyncio import iscoroutinefunction, gather
 
-from ... import task_dict, task_dict_lock, bot_start_time, status_dict, DOWNLOAD_DIR
-from ...core.config_manager import Config
-from ..telegram_helper.button_build import ButtonMaker
+from psutil import cpu_percent, disk_usage, virtual_memory
+
+from bot import DOWNLOAD_DIR, bot_start_time, status_dict, task_dict, task_dict_lock
+from bot.core.config_manager import Config
+from bot.helper.telegram_helper.button_build import ButtonMaker
 
 SIZE_UNITS = ["B", "KB", "MB", "GB", "TB", "PB"]
 
@@ -59,9 +61,10 @@ async def get_task_by_gid(gid: str):
 async def get_specific_tasks(status, user_id):
     if status == "All":
         if user_id:
-            return [tk for tk in task_dict.values() if tk.listener.user_id == user_id]
-        else:
-            return list(task_dict.values())
+            return [
+                tk for tk in task_dict.values() if tk.listener.user_id == user_id
+            ]
+        return list(task_dict.values())
     tasks_to_check = (
         [tk for tk in task_dict.values() if tk.listener.user_id == user_id]
         if user_id
@@ -174,7 +177,8 @@ async def get_readable_message(sid, is_user, page_no=1, status="All", page_step=
     start_position = (page_no - 1) * STATUS_LIMIT
 
     for index, task in enumerate(
-        tasks[start_position : STATUS_LIMIT + start_position], start=1
+        tasks[start_position : STATUS_LIMIT + start_position],
+        start=1,
     ):
         if status != "All":
             tstatus = status
@@ -209,10 +213,8 @@ async def get_readable_message(sid, is_user, page_no=1, status="All", page_step=
             msg += f"\n<b>Speed:</b> {task.speed()}"
             msg += f"\n<b>ETA:</b> {task.eta()}"
             if hasattr(task, "seeders_num"):
-                try:
+                with contextlib.suppress(Exception):
                     msg += f"\n<b>Seeders:</b> {task.seeders_num()} | <b>Leechers:</b> {task.leechers_num()}"
-                except:
-                    pass
         elif tstatus == MirrorStatus.STATUS_SEED:
             msg += f"\n<b>Size: </b>{task.size()}"
             msg += f"\n<b>Speed: </b>{task.seed_speed()}"
@@ -226,8 +228,7 @@ async def get_readable_message(sid, is_user, page_no=1, status="All", page_step=
     if len(msg) == 0:
         if status == "All":
             return None, None
-        else:
-            msg = f"No Active {status} Tasks!\n\n"
+        msg = f"No Active {status} Tasks!\n\n"
     buttons = ButtonMaker()
     if not is_user:
         buttons.data_button("📜", f"status {sid} ov", position="header")

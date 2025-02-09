@@ -1,24 +1,27 @@
-from .. import LOGGER, user_data
-from ..helper.ext_utils.bot_utils import (
-    sync_to_async,
+from bot import LOGGER, user_data
+from bot.helper.ext_utils.bot_utils import (
     get_telegraph_list,
     new_task,
+    sync_to_async,
 )
-from ..helper.mirror_leech_utils.gdrive_utils.search import GoogleDriveSearch
-from ..helper.telegram_helper.button_build import ButtonMaker
-from ..helper.telegram_helper.message_utils import send_message, edit_message
+from bot.helper.mirror_leech_utils.gdrive_utils.search import GoogleDriveSearch
+from bot.helper.telegram_helper.button_build import ButtonMaker
+from bot.helper.telegram_helper.message_utils import edit_message, send_message
 
 
 async def list_buttons(user_id, is_recursive=True, user_token=False):
     buttons = ButtonMaker()
     buttons.data_button(
-        "Folders", f"list_types {user_id} folders {is_recursive} {user_token}"
+        "Folders",
+        f"list_types {user_id} folders {is_recursive} {user_token}",
     )
     buttons.data_button(
-        "Files", f"list_types {user_id} files {is_recursive} {user_token}"
+        "Files",
+        f"list_types {user_id} files {is_recursive} {user_token}",
     )
     buttons.data_button(
-        "Both", f"list_types {user_id} both {is_recursive} {user_token}"
+        "Both",
+        f"list_types {user_id} both {is_recursive} {user_token}",
     )
     buttons.data_button(
         f"Recursive: {is_recursive}",
@@ -66,17 +69,17 @@ async def select_type(_, query):
     data = query.data.split()
     if user_id != int(data[1]):
         return await query.answer(text="Not Yours!", show_alert=True)
-    elif data[2] == "rec":
+    if data[2] == "rec":
         await query.answer()
         is_recursive = not bool(eval(data[3]))
         buttons = await list_buttons(user_id, is_recursive, eval(data[4]))
         return await edit_message(message, "Choose list options:", buttons)
-    elif data[2] == "ut":
+    if data[2] == "ut":
         await query.answer()
         user_token = not bool(eval(data[4]))
         buttons = await list_buttons(user_id, eval(data[3]), user_token)
         return await edit_message(message, "Choose list options:", buttons)
-    elif data[2] == "cancel":
+    if data[2] == "cancel":
         await query.answer()
         return await edit_message(message, "list has been canceled!")
     await query.answer()
@@ -85,6 +88,7 @@ async def select_type(_, query):
     user_token = eval(data[4])
     await edit_message(message, f"<b>Searching for <i>{key}</i></b>")
     await _list_drive(key, message, item_type, is_recursive, user_token, user_id)
+    return None
 
 
 @new_task
@@ -94,6 +98,4 @@ async def gdrive_search(_, message):
     user_id = message.from_user.id
     buttons = await list_buttons(user_id)
     await send_message(message, "Choose list options:", buttons)
-
-
-
+    return None

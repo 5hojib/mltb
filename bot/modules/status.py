@@ -1,35 +1,36 @@
-from psutil import cpu_percent, virtual_memory, disk_usage
-from time import time
 from asyncio import gather, iscoroutinefunction
+from time import time
 
-from .. import (
-    task_dict_lock,
-    status_dict,
-    task_dict,
+from psutil import cpu_percent, disk_usage, virtual_memory
+
+from bot import (
+    DOWNLOAD_DIR,
     bot_start_time,
     intervals,
     sabnzbd_client,
-    DOWNLOAD_DIR,
+    status_dict,
+    task_dict,
+    task_dict_lock,
 )
-from ..core.torrent_manager import TorrentManager
-from ..helper.ext_utils.bot_utils import new_task
 from bot.core.jdownloader_booter import jdownloader
-from ..helper.ext_utils.status_utils import (
+from bot.core.torrent_manager import TorrentManager
+from bot.helper.ext_utils.bot_utils import new_task
+from bot.helper.ext_utils.status_utils import (
     MirrorStatus,
     get_readable_file_size,
     get_readable_time,
     speed_string_to_bytes,
 )
-from ..helper.telegram_helper.bot_commands import BotCommands
-from ..helper.telegram_helper.message_utils import (
-    send_message,
-    delete_message,
+from bot.helper.telegram_helper.bot_commands import BotCommands
+from bot.helper.telegram_helper.button_build import ButtonMaker
+from bot.helper.telegram_helper.message_utils import (
     auto_delete_message,
+    delete_message,
+    edit_message,
+    send_message,
     send_status_message,
     update_status_message,
-    edit_message,
 )
-from ..helper.telegram_helper.button_build import ButtonMaker
 
 
 @new_task
@@ -132,7 +133,7 @@ async def status_pages(_, query):
         seed_speed = ss
         async with task_dict_lock:
             status_results = await gather(
-                *(get_download_status(download) for download in task_dict.values())
+                *(get_download_status(download) for download in task_dict.values()),
             )
             for status, speed in status_results:
                 match status:
@@ -170,10 +171,10 @@ async def status_pages(_, query):
                     case _:
                         tasks["Download"] += 1
 
-        msg = f"""<b>DL:</b> {tasks['Download']} | <b>UP:</b> {tasks['Upload']} | <b>SD:</b> {tasks['Seed']} | <b>AR:</b> {tasks['Archive']}
-<b>EX:</b> {tasks['Extract']} | <b>SP:</b> {tasks['Split']} | <b>QD:</b> {tasks['QueueDl']} | <b>QU:</b> {tasks['QueueUp']}
-<b>CL:</b> {tasks['Clone']} | <b>CK:</b> {tasks['CheckUp']} | <b>PA:</b> {tasks['Pause']} | <b>SV:</b> {tasks['SamVid']}
-<b>CM:</b> {tasks['ConvertMedia']} | <b>FF:</b> {tasks['FFmpeg']}
+        msg = f"""<b>DL:</b> {tasks["Download"]} | <b>UP:</b> {tasks["Upload"]} | <b>SD:</b> {tasks["Seed"]} | <b>AR:</b> {tasks["Archive"]}
+<b>EX:</b> {tasks["Extract"]} | <b>SP:</b> {tasks["Split"]} | <b>QD:</b> {tasks["QueueDl"]} | <b>QU:</b> {tasks["QueueUp"]}
+<b>CL:</b> {tasks["Clone"]} | <b>CK:</b> {tasks["CheckUp"]} | <b>PA:</b> {tasks["Pause"]} | <b>SV:</b> {tasks["SamVid"]}
+<b>CM:</b> {tasks["ConvertMedia"]} | <b>FF:</b> {tasks["FFmpeg"]}
 
 <b>ODLS:</b> {get_readable_file_size(dl_speed)}/s
 <b>OULS:</b> {get_readable_file_size(up_speed)}/s

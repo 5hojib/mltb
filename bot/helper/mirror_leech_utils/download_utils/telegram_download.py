@@ -1,17 +1,17 @@
 from asyncio import Lock, sleep
 from time import time
-from pyrogram.errors import FloodWait, FloodPremiumWait
 
-from .... import (
-    LOGGER,
-    task_dict,
-    task_dict_lock,
+from pyrogram.errors import FloodPremiumWait, FloodWait
+
+from bot import LOGGER, task_dict, task_dict_lock
+from bot.core.mltb_client import TgClient
+from bot.helper.ext_utils.task_manager import (
+    check_running_tasks,
+    stop_duplicate_check,
 )
-from ....core.mltb_client import TgClient
-from ...ext_utils.task_manager import check_running_tasks, stop_duplicate_check
-from ...mirror_leech_utils.status_utils.queue_status import QueueStatus
-from ...mirror_leech_utils.status_utils.telegram_status import TelegramStatus
-from ...telegram_helper.message_utils import send_status_message
+from bot.helper.mirror_leech_utils.status_utils.queue_status import QueueStatus
+from bot.helper.mirror_leech_utils.status_utils.telegram_status import TelegramStatus
+from bot.helper.telegram_helper.message_utils import send_status_message
 
 global_lock = Lock()
 GLOBAL_GID = set()
@@ -39,7 +39,10 @@ class TelegramDownloadHelper:
         self._id = file_id
         async with task_dict_lock:
             task_dict[self._listener.mid] = TelegramStatus(
-                self._listener, self, file_id[:12], "dl"
+                self._listener,
+                self,
+                file_id[:12],
+                "dl",
             )
         if not from_queue:
             await self._listener.on_download_start()
@@ -47,7 +50,9 @@ class TelegramDownloadHelper:
                 await send_status_message(self._listener.message)
             LOGGER.info(f"Download from Telegram: {self._listener.name}")
         else:
-            LOGGER.info(f"Start Queued Download from Telegram: {self._listener.name}")
+            LOGGER.info(
+                f"Start Queued Download from Telegram: {self._listener.name}"
+            )
 
     async def _on_download_progress(self, current, _):
         if self._listener.is_cancelled:
@@ -67,12 +72,12 @@ class TelegramDownloadHelper:
         await self._listener.on_download_complete()
         async with global_lock:
             GLOBAL_GID.remove(self._id)
-        return
 
     async def _download(self, message, path):
         try:
             download = await message.download(
-                file_name=path, progress=self._on_download_progress
+                file_name=path,
+                progress=self._on_download_progress,
             )
             if self._listener.is_cancelled:
                 return
@@ -97,7 +102,8 @@ class TelegramDownloadHelper:
             if self._listener.user_transmission and self._listener.is_super_chat:
                 self.session = "user"
                 message = await TgClient.user.get_messages(
-                    chat_id=message.chat.id, message_ids=message.id
+                    chat_id=message.chat.id,
+                    message_ids=message.id,
                 )
             else:
                 self.session = "bot"
@@ -137,7 +143,9 @@ class TelegramDownloadHelper:
                     LOGGER.info(f"Added to Queue/Download: {self._listener.name}")
                     async with task_dict_lock:
                         task_dict[self._listener.mid] = QueueStatus(
-                            self._listener, gid, "dl"
+                            self._listener,
+                            gid,
+                            "dl",
                         )
                     await self._listener.on_download_start()
                     if self._listener.multi <= 1:
@@ -145,11 +153,13 @@ class TelegramDownloadHelper:
                     await event.wait()
                     if self.session == "bot":
                         message = await self._listener.client.get_messages(
-                            chat_id=message.chat.id, message_ids=message.id
+                            chat_id=message.chat.id,
+                            message_ids=message.id,
                         )
                     else:
                         message = await TgClient.user.get_messages(
-                            chat_id=message.chat.id, message_ids=message.id
+                            chat_id=message.chat.id,
+                            message_ids=message.id,
                         )
                     if self._listener.is_cancelled:
                         async with global_lock:
@@ -163,12 +173,12 @@ class TelegramDownloadHelper:
                 await self._on_download_error("File already being downloaded!")
         else:
             await self._on_download_error(
-                "No document in the replied message! Use SuperGroup incase you are trying to download with User session!"
+                "No document in the replied message! Use SuperGroup incase you are trying to download with User session!",
             )
 
     async def cancel_task(self):
         self._listener.is_cancelled = True
         LOGGER.info(
-            f"Cancelling download on user request: name: {self._listener.name} id: {self._id}"
+            f"Cancelling download on user request: name: {self._listener.name} id: {self._id}",
         )
         await self._on_download_error("Stopped by user!")

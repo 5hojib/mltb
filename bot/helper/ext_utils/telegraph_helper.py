@@ -1,9 +1,10 @@
 from asyncio import sleep
 from secrets import token_urlsafe
+
 from telegraph.aio import Telegraph
 from telegraph.exceptions import RetryAfterError
 
-from ... import LOGGER
+from bot import LOGGER
 
 
 class TelegraphHelper:
@@ -33,7 +34,7 @@ class TelegraphHelper:
             )
         except RetryAfterError as st:
             LOGGER.warning(
-                f"Telegraph Flood control exceeded. I will sleep for {st.retry_after} seconds."
+                f"Telegraph Flood control exceeded. I will sleep for {st.retry_after} seconds.",
             )
             await sleep(st.retry_after)
             return await self.create_page(title, content)
@@ -49,7 +50,7 @@ class TelegraphHelper:
             )
         except RetryAfterError as st:
             LOGGER.warning(
-                f"Telegraph Flood control exceeded. I will sleep for {st.retry_after} seconds."
+                f"Telegraph Flood control exceeded. I will sleep for {st.retry_after} seconds.",
             )
             await sleep(st.retry_after)
             return await self.edit_page(path, title, content)
@@ -76,11 +77,11 @@ class TelegraphHelper:
                 title="Mirror-leech-bot Torrent Search",
                 content=content,
             )
-        return
 
 
 telegraph = TelegraphHelper(
-    "Mirror-Leech-Telegram-Bot", "https://github.com/anasty17/mirror-leech-telegram-bot"
+    "Mirror-Leech-Telegram-Bot",
+    "https://github.com/anasty17/mirror-leech-telegram-bot",
 )
 
 print(__name__)

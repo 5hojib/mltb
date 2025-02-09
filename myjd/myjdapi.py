@@ -1,7 +1,7 @@
-from json import dumps, loads, JSONDecodeError
-from httpx import AsyncClient, RequestError
-from httpx import AsyncHTTPTransport
 from functools import wraps
+from json import JSONDecodeError, dumps, loads
+
+from httpx import AsyncClient, AsyncHTTPTransport, RequestError
 
 from .exception import (
     MYJDApiException,
@@ -48,7 +48,6 @@ class Jd:
 
 
 class Config:
-
     def __init__(self, device):
         self.device = device
         self.url = "/config"
@@ -59,8 +58,7 @@ class Config:
         """
         if params is None:
             return await self.device.action(f"{self.url}/list", params)
-        else:
-            return await self.device.action(f"{self.url}/list")
+        return await self.device.action(f"{self.url}/list")
 
     async def listEnum(self, type):
         """
@@ -120,7 +118,7 @@ class Config:
                     "includeExtensions": True,
                     "pattern": "",
                     "values": True,
-                }
+                },
             ]
         return await self.device.action(f"{self.url}/query", params)
 
@@ -152,7 +150,6 @@ class Config:
 
 
 class DownloadController:
-
     def __init__(self, device):
         self.device = device
         self.url = "/downloadcontroller"
@@ -211,7 +208,7 @@ class Extension:
                     "name": True,
                     "pattern": "",
                     "installed": True,
-                }
+                },
             ]
         return await self.device.action(f"{self.url}/list", params=params)
 
@@ -225,11 +222,12 @@ class Extension:
         return await self.device.action(f"{self.url}/isEnabled", params=[id])
 
     async def setEnabled(self, id, enabled):
-        return await self.device.action(f"{self.url}/setEnabled", params=[id, enabled])
+        return await self.device.action(
+            f"{self.url}/setEnabled", params=[id, enabled]
+        )
 
 
 class Linkgrabber:
-
     def __init__(self, device):
         self.device = device
         self.url = "/linkgrabberv2"
@@ -311,12 +309,17 @@ class Linkgrabber:
                     "variantID": True,
                     "variants": True,
                     "priority": True,
-                }
+                },
             ]
         return await self.device.action(f"{self.url}/queryLinks", params)
 
     async def cleanup(
-        self, action, mode, selection_type, link_ids=None, package_ids=None
+        self,
+        action,
+        mode,
+        selection_type,
+        link_ids=None,
+        package_ids=None,
     ):
         """
         Clean packages and/or links of the linkgrabber list.
@@ -436,7 +439,7 @@ class Linkgrabber:
                     "downloadPassword": None,
                     "destinationFolder": None,
                     "overwritePackagizerRules": False,
-                }
+                },
             ]
         return await self.device.action(f"{self.url}/addLinks", params)
 
@@ -451,7 +454,11 @@ class Linkgrabber:
         return await self.device.action(f"{self.url}/setDownloadDirectory", params)
 
     async def move_to_new_package(
-        self, name: str, path: str, link_ids: list = None, package_ids: list = None
+        self,
+        name: str,
+        path: str,
+        link_ids: list | None = None,
+        package_ids: list | None = None,
     ):
         # Requires at least a link_ids or package_ids list, or both.
         if link_ids is None:
@@ -514,13 +521,12 @@ class Linkgrabber:
                     "saveTo": True,
                     "startAt": 0,
                     "status": True,
-                }
+                },
             ]
         return await self.device.action(f"{self.url}/queryPackages", params)
 
 
 class Downloads:
-
     def __init__(self, device):
         self.device = device
         self.url = "/downloadsV2"
@@ -553,7 +559,7 @@ class Downloads:
                     "startAt": 0,
                     "status": True,
                     "url": True,
-                }
+                },
             ]
         return await self.device.action(f"{self.url}/queryLinks", params)
 
@@ -577,12 +583,17 @@ class Downloads:
                     "speed": True,
                     "startAt": 0,
                     "status": True,
-                }
+                },
             ]
         return await self.device.action(f"{self.url}/queryPackages", params)
 
     async def cleanup(
-        self, action, mode, selection_type, link_ids=None, package_ids=None
+        self,
+        action,
+        mode,
+        selection_type,
+        link_ids=None,
+        package_ids=None,
     ):
         """
         Clean packages and/or links of the linkgrabber list.
@@ -658,7 +669,11 @@ class Downloads:
         return await self.device.action(f"{self.url}/resetLinks", params)
 
     async def move_to_new_package(
-        self, link_ids, package_ids, new_pkg_name, download_path
+        self,
+        link_ids,
+        package_ids,
+        new_pkg_name,
+        download_path,
     ):
         params = [link_ids, package_ids, new_pkg_name, download_path]
         return await self.device.action(f"{self.url}/movetoNewPackage", params)
@@ -669,7 +684,6 @@ class Downloads:
 
 
 class Captcha:
-
     def __init__(self, device):
         self.device = device
         self.url = "/captcha"
@@ -685,7 +699,6 @@ class Captcha:
 
 
 class Jddevice:
-
     def __init__(self, jd):
         """This functions initializates the device instance.
         It uses the provided dictionary to create the device.
@@ -713,7 +726,6 @@ class Jddevice:
 
 
 class clientSession(AsyncClient):
-
     @wraps(AsyncClient.request)
     async def request(self, method: str, url: str, **kwargs):
         kwargs.setdefault("timeout", 3)
@@ -722,7 +734,6 @@ class clientSession(AsyncClient):
 
 
 class MyJdApi:
-
     def __init__(self):
         self.__api_url = "http://127.0.0.1:3128"
         self._http_session = None
@@ -775,7 +786,8 @@ class MyJdApi:
                 error_msg = loads(response)
             except JSONDecodeError as exc:
                 raise MYJDDecodeException(
-                    "Failed to decode response: {}", response
+                    "Failed to decode response: {}",
+                    response,
                 ) from exc
             msg = (
                 "\n\tSOURCE: "
@@ -790,6 +802,8 @@ class MyJdApi:
             if data is not None:
                 msg += "DATA:\n" + data
             raise (
-                MYJDApiException.get_exception(error_msg["src"], error_msg["type"], msg)
+                MYJDApiException.get_exception(
+                    error_msg["src"], error_msg["type"], msg
+                )
             )
         return loads(response)

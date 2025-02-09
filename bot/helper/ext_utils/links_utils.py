@@ -10,7 +10,7 @@ def is_url(url: str):
         re_match(
             r"^(?!\/)(rtmps?:\/\/|mms:\/\/|rtsp:\/\/|https?:\/\/|ftp:\/\/)?([^\/:]+:[^\/@]+@)?(www\.)?(?=[^\/:\s]+\.[^\/:\s]+)([^\/:\s]+\.[^\/:\s]+)(:\d+)?(\/[^#\s]*[\s\S]*)?(\?[^#\s]*)?(#.*)?$",
             url,
-        )
+        ),
     )
 
 
@@ -27,7 +27,7 @@ def is_share_link(url: str):
         re_match(
             r"https?:\/\/.+\.gdtot\.\S+|https?:\/\/(filepress|filebee|appdrive|gdflix)\.\S+",
             url,
-        )
+        ),
     )
 
 
@@ -36,7 +36,7 @@ def is_rclone_path(path: str):
         re_match(
             r"^(mrcc:)?(?!(magnet:|mtp:|sa:|tp:))(?![- ])[a-zA-Z0-9_\. -]+(?<! ):(?!.*\/\/).*$|^rcl$",
             path,
-        )
+        ),
     )
 
 
@@ -45,5 +45,5 @@ def is_gdrive_id(id_: str):
         re_match(
             r"^(tp:|sa:|mtp:)?(?:[a-zA-Z0-9-_]{33}|[a-zA-Z0-9_-]{19})$|^gdl$|^(tp:|mtp:)?root$",
             id_,
-        )
+        ),
     )

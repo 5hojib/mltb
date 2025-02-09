@@ -1,25 +1,28 @@
-from aiofiles.os import path as aiopath, remove, makedirs
-from aiofiles import open as aiopen
-from aioshutil import rmtree
 from asyncio import create_subprocess_exec, create_subprocess_shell
 from importlib import import_module
 
-from .. import (
+from aiofiles import open as aiopen
+from aiofiles.os import makedirs, remove
+from aiofiles.os import path as aiopath
+from aioshutil import rmtree
+
+from bot import (
+    LOGGER,
     aria2_options,
-    qbit_options,
-    nzb_options,
+    auth_chats,
     drives_ids,
     drives_names,
-    index_urls,
-    user_data,
     excluded_extensions,
-    LOGGER,
+    index_urls,
+    nzb_options,
+    qbit_options,
     rss_dict,
     sabnzbd_client,
-    auth_chats,
     sudo_users,
+    user_data,
 )
-from ..helper.ext_utils.db_handler import database
+from bot.helper.ext_utils.db_handler import database
+
 from .config_manager import Config
 from .mltb_client import TgClient
 from .torrent_manager import TorrentManager
@@ -35,7 +38,7 @@ async def update_qb_options():
                 del qbit_options[k]
         qbit_options["web_ui_password"] = "mltbmltb"
         await TorrentManager.qbittorrent.app.set_preferences(
-            {"web_ui_password": "mltbmltb"}
+            {"web_ui_password": "mltbmltb"},
         )
     else:
         await TorrentManager.qbittorrent.app.set_preferences(qbit_options)
@@ -69,25 +72,32 @@ async def load_settings():
             if not key.startswith("__")
         }
         old_config = await database.db.settings.deployConfig.find_one(
-            {"_id": BOT_ID}, {"_id": 0}
+            {"_id": BOT_ID},
+            {"_id": 0},
         )
         if old_config is None:
             database.db.settings.deployConfig.replace_one(
-                {"_id": BOT_ID}, config_file, upsert=True
+                {"_id": BOT_ID},
+                config_file,
+                upsert=True,
             )
         if old_config and old_config != config_file:
             await database.db.settings.deployConfig.replace_one(
-                {"_id": BOT_ID}, config_file, upsert=True
+                {"_id": BOT_ID},
+                config_file,
+                upsert=True,
             )
         else:
             config_dict = await database.db.settings.config.find_one(
-                {"_id": BOT_ID}, {"_id": 0}
+                {"_id": BOT_ID},
+                {"_id": 0},
             )
             if config_dict:
                 Config.load_dict(config_dict)
 
         if pf_dict := await database.db.settings.files.find_one(
-            {"_id": BOT_ID}, {"_id": 0}
+            {"_id": BOT_ID},
+            {"_id": 0},
         ):
             for key, value in pf_dict.items():
                 if value:
@@ -96,17 +106,20 @@ async def load_settings():
                         await f.write(value)
 
         if a2c_options := await database.db.settings.aria2c.find_one(
-            {"_id": BOT_ID}, {"_id": 0}
+            {"_id": BOT_ID},
+            {"_id": 0},
         ):
             aria2_options.update(a2c_options)
 
         if qbit_opt := await database.db.settings.qbittorrent.find_one(
-            {"_id": BOT_ID}, {"_id": 0}
+            {"_id": BOT_ID},
+            {"_id": 0},
         ):
             qbit_options.update(qbit_opt)
 
         if nzb_opt := await database.db.settings.nzb.find_one(
-            {"_id": BOT_ID}, {"_id": 0}
+            {"_id": BOT_ID},
+            {"_id": 0},
         ):
             if await aiopath.exists("sabnzbd/SABnzbd.ini.bak"):
                 await remove("sabnzbd/SABnzbd.ini.bak")
@@ -158,11 +171,15 @@ async def save_settings():
         return
     config_dict = Config.get_all()
     await database.db.settings.config.replace_one(
-        {"_id": TgClient.ID}, config_dict, upsert=True
+        {"_id": TgClient.ID},
+        config_dict,
+        upsert=True,
     )
     if await database.db.settings.aria2c.find_one({"_id": TgClient.ID}) is None:
         await database.db.settings.aria2c.update_one(
-            {"_id": TgClient.ID}, {"$set": aria2_options}, upsert=True
+            {"_id": TgClient.ID},
+            {"$set": aria2_options},
+            upsert=True,
         )
     if await database.db.settings.qbittorrent.find_one({"_id": TgClient.ID}) is None:
         await database.save_qbit_settings()
@@ -170,7 +187,9 @@ async def save_settings():
         async with aiopen("sabnzbd/SABnzbd.ini", "rb+") as pf:
             nzb_conf = await pf.read()
         await database.db.settings.nzb.update_one(
-            {"_id": TgClient.ID}, {"$set": {"SABnzbd__ini": nzb_conf}}, upsert=True
+            {"_id": TgClient.ID},
+            {"$set": {"SABnzbd__ini": nzb_conf}},
+            upsert=True,
         )
 
 
@@ -184,7 +203,7 @@ async def update_variables():
 
     Config.HYBRID_LEECH = bool(Config.HYBRID_LEECH and TgClient.IS_PREMIUM_USER)
     Config.USER_TRANSMISSION = bool(
-        Config.USER_TRANSMISSION and TgClient.IS_PREMIUM_USER
+        Config.USER_TRANSMISSION and TgClient.IS_PREMIUM_USER,
     )
 
     if Config.AUTHORIZED_CHATS:
@@ -193,7 +212,7 @@ async def update_variables():
             chat_id, *thread_ids = id_.split("|")
             chat_id = int(chat_id.strip())
             if thread_ids:
-                thread_ids = list(map(lambda x: int(x.strip()), thread_ids))
+                thread_ids = [int(x.strip()) for x in thread_ids]
                 auth_chats[chat_id] = thread_ids
             else:
                 auth_chats[chat_id] = []
@@ -228,20 +247,19 @@ async def update_variables():
 
 
 async def load_configurations():
-
     if not await aiopath.exists(".netrc"):
         async with aiopen(".netrc", "w"):
             pass
 
     await (
         await create_subprocess_shell(
-            "chmod 600 .netrc && cp .netrc /root/.netrc && chmod +x aria-nox-nzb.sh && ./aria-nox-nzb.sh"
+            "chmod 600 .netrc && cp .netrc /root/.netrc && chmod +x aria-nox-nzb.sh && ./aria-nox-nzb.sh",
         )
     ).wait()
 
     if Config.BASE_URL:
         await create_subprocess_shell(
-            f"gunicorn -k uvicorn.workers.UvicornWorker -w 1 web.wserver:app --bind 0.0.0.0:{Config.BASE_URL_PORT}"
+            f"gunicorn -k uvicorn.workers.UvicornWorker -w 1 web.wserver:app --bind 0.0.0.0:{Config.BASE_URL_PORT}",
         )
 
     if await aiopath.exists("cfg.zip"):
@@ -257,7 +275,12 @@ async def load_configurations():
             await rmtree("accounts")
         await (
             await create_subprocess_exec(
-                "7z", "x", "-o.", "-aoa", "accounts.zip", "accounts/*.json"
+                "7z",
+                "x",
+                "-o.",
+                "-aoa",
+                "accounts.zip",
+                "accounts/*.json",
             )
         ).wait()
         await (await create_subprocess_exec("chmod", "-R", "777", "accounts")).wait()

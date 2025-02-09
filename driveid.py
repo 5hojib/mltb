@@ -1,5 +1,6 @@
 import os
 import re
+import sys
 
 print(
     "\n\n"
@@ -8,7 +9,7 @@ print(
     "        teamdrive NAME      -->   anything that you likes\n"
     "        teamdrive ID        -->   id of teamdrives in which you likes to search ('root' for main drive)\n"
     "        teamdrive INDEX URL -->   enter index url for this drive.\n"
-    "                                  go to the respective drive and copy the url from address bar\n"
+    "                                  go to the respective drive and copy the url from address bar\n",
 )
 msg = ""
 if os.path.exists("list_drives.txt"):
@@ -19,7 +20,7 @@ if os.path.exists("list_drives.txt"):
         print(
             "\n\n"
             "      DO YOU WISH TO KEEP THE ABOVE DETAILS THAT YOU PREVIOUSLY ADDED???? ENTER (y/n)\n"
-            "      IF NOTHING SHOWS ENTER n"
+            "      IF NOTHING SHOWS ENTER n",
         )
         while 1:
             choice = input()
@@ -30,7 +31,7 @@ if os.path.exists("list_drives.txt"):
                 break
             else:
                 print(
-                    "\n\n      DO YOU WISH TO KEEP THE ABOVE DETAILS ???? y/n <=== this is option ..... OPEN YOUR EYES & READ..."
+                    "\n\n      DO YOU WISH TO KEEP THE ABOVE DETAILS ???? y/n <=== this is option ..... OPEN YOUR EYES & READ...",
                 )
 num = int(input("    How Many Drive/Folder You Likes To Add : "))
 for count in range(1, num + 1):
@@ -40,7 +41,7 @@ for count in range(1, num + 1):
     index = input("    Enter Drive INDEX URL (optional) : ")
     if not name or not id:
         print("\n\n        ERROR : Dont leave the name/id without filling.")
-        exit(1)
+        sys.exit(1)
     name = name.replace(" ", "_")
     if index:
         if index[-1] == "/":

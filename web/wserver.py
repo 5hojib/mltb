@@ -1,17 +1,18 @@
 from uvloop import install
 
 install()
+from asyncio import sleep
 from contextlib import asynccontextmanager
+from logging import INFO, WARNING, FileHandler, StreamHandler, basicConfig, getLogger
+
+from aioaria2 import Aria2HttpClient
+from aiohttp.client_exceptions import ClientResponseError
+from aioqbt.client import create_client
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
-from logging import getLogger, FileHandler, StreamHandler, INFO, basicConfig, WARNING
-from asyncio import sleep
-from sabnzbdapi import SabnzbdClient
-from aioaria2 import Aria2HttpClient
-from aioqbt.client import create_client
-from aiohttp.client_exceptions import ClientResponseError
 
+from sabnzbdapi import SabnzbdClient
 from web.nodes import extract_file_ids, make_tree
 
 getLogger("httpx").setLevel(WARNING)
@@ -69,14 +70,18 @@ async def re_verify(paused, resumed, hash_id):
         if paused:
             try:
                 await qbittorrent.torrents.file_prio(
-                    hash=hash_id, id=paused, priority=0
+                    hash=hash_id,
+                    id=paused,
+                    priority=0,
                 )
             except ClientResponseError as e:
                 LOGGER.error(f"{e} Errored in reverification paused!")
         if resumed:
             try:
                 await qbittorrent.torrents.file_prio(
-                    hash=hash_id, id=resumed, priority=1
+                    hash=hash_id,
+                    id=resumed,
+                    priority=1,
                 )
             except ClientResponseError as e:
                 LOGGER.error(f"{e} Errored in reverification resumed!")
@@ -93,7 +98,9 @@ async def files(request: Request):
 
 
 @app.api_route(
-    "/app/files/torrent", methods=["GET", "POST"], response_class=HTMLResponse
+    "/app/files/torrent",
+    methods=["GET", "POST"],
+    response_class=HTMLResponse,
 )
 async def handle_torrent(request: Request):
     params = request.query_params
@@ -105,7 +112,7 @@ async def handle_torrent(request: Request):
                 "engine": "",
                 "error": "GID is missing",
                 "message": "GID not specified",
-            }
+            },
         )
 
     if not (pin := params.get("pin")):
@@ -115,7 +122,7 @@ async def handle_torrent(request: Request):
                 "engine": "",
                 "error": "Pin is missing",
                 "message": "PIN not specified",
-            }
+            },
         )
 
     code = "".join([nbr for nbr in gid if nbr.isdigit()][:4])
@@ -126,7 +133,7 @@ async def handle_torrent(request: Request):
                 "engine": "",
                 "error": "Invalid pin",
                 "message": "The PIN you entered is incorrect",
-            }
+            },
         )
 
     if request.method == "POST":
@@ -137,7 +144,7 @@ async def handle_torrent(request: Request):
                     "engine": "",
                     "error": "Mode is not specified",
                     "message": "Mode is not specified",
-                }
+                },
             )
         data = await request.json()
         if mode == "rename":
@@ -216,14 +223,18 @@ async def set_qbittorrent(gid, selected_files, unselected_files):
     if unselected_files:
         try:
             await qbittorrent.torrents.file_prio(
-                hash=gid, id=unselected_files, priority=0
+                hash=gid,
+                id=unselected_files,
+                priority=0,
             )
         except ClientResponseError as e:
             LOGGER.error(f"{e} Errored in paused")
     if selected_files:
         try:
             await qbittorrent.torrents.file_prio(
-                hash=gid, id=selected_files, priority=1
+                hash=gid,
+                id=selected_files,
+                priority=1,
             )
         except ClientResponseError as e:
             LOGGER.error(f"{e} Errored in resumed")

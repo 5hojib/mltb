@@ -1,8 +1,8 @@
-from ..helper.ext_utils.bot_utils import sync_to_async, new_task
-from ..helper.ext_utils.links_utils import is_gdrive_link
-from ..helper.ext_utils.status_utils import get_readable_file_size
-from ..helper.mirror_leech_utils.gdrive_utils.count import GoogleDriveCount
-from ..helper.telegram_helper.message_utils import delete_message, send_message
+from bot.helper.ext_utils.bot_utils import new_task, sync_to_async
+from bot.helper.ext_utils.links_utils import is_gdrive_link
+from bot.helper.ext_utils.status_utils import get_readable_file_size
+from bot.helper.mirror_leech_utils.gdrive_utils.count import GoogleDriveCount
+from bot.helper.telegram_helper.message_utils import delete_message, send_message
 
 
 @new_task
@@ -21,7 +21,9 @@ async def count_node(_, message):
     if is_gdrive_link(link):
         msg = await send_message(message, f"Counting: <code>{link}</code>")
         name, mime_type, size, files, folders = await sync_to_async(
-            GoogleDriveCount().count, link, user.id
+            GoogleDriveCount().count,
+            link,
+            user.id,
         )
         if mime_type is None:
             await send_message(message, name)
@@ -35,11 +37,6 @@ async def count_node(_, message):
             msg += f"\n<b>Files: </b>{files}"
         msg += f"\n\n<b>cc: </b>{tag}"
     else:
-        msg = (
-            "Send Gdrive link along with command or by replying to the link by command"
-        )
+        msg = "Send Gdrive link along with command or by replying to the link by command"
 
     await send_message(message, msg)
-
-
-

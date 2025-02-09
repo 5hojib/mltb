@@ -1,28 +1,34 @@
-from httpx import AsyncClient
-from asyncio import wait_for, Event
+from asyncio import Event, wait_for
 from functools import partial
+from time import time
+
+from httpx import AsyncClient
 from pyrogram.filters import regex, user
 from pyrogram.handlers import CallbackQueryHandler
-from time import time
 from yt_dlp import YoutubeDL
 
-from .. import LOGGER, bot_loop, task_dict_lock, DOWNLOAD_DIR
-from ..core.config_manager import Config
-from ..helper.ext_utils.bot_utils import (
+from bot import DOWNLOAD_DIR, LOGGER, bot_loop, task_dict_lock
+from bot.core.config_manager import Config
+from bot.helper.ext_utils.bot_utils import (
+    COMMAND_USAGE,
+    arg_parser,
     new_task,
     sync_to_async,
-    arg_parser,
-    COMMAND_USAGE,
 )
-from ..helper.ext_utils.links_utils import is_url
-from ..helper.ext_utils.status_utils import get_readable_file_size, get_readable_time
-from ..helper.listeners.task_listener import TaskListener
-from ..helper.mirror_leech_utils.download_utils.yt_dlp_download import YoutubeDLHelper
-from ..helper.telegram_helper.button_build import ButtonMaker
-from ..helper.telegram_helper.message_utils import (
-    send_message,
-    edit_message,
+from bot.helper.ext_utils.links_utils import is_url
+from bot.helper.ext_utils.status_utils import (
+    get_readable_file_size,
+    get_readable_time,
+)
+from bot.helper.listeners.task_listener import TaskListener
+from bot.helper.mirror_leech_utils.download_utils.yt_dlp_download import (
+    YoutubeDLHelper,
+)
+from bot.helper.telegram_helper.button_build import ButtonMaker
+from bot.helper.telegram_helper.message_utils import (
     delete_message,
+    edit_message,
+    send_message,
 )
 
 
@@ -78,7 +84,8 @@ class YtSelection:
         pfunc = partial(select_format, obj=self)
         handler = self.listener.client.add_handler(
             CallbackQueryHandler(
-                pfunc, filters=regex("^ytq") & user(self.listener.user_id)
+                pfunc,
+                filters=regex("^ytq") & user(self.listener.user_id),
             ),
             group=-1,
         )
@@ -97,7 +104,9 @@ class YtSelection:
         if "entries" in result:
             self._is_playlist = True
             for i in ["144", "240", "360", "480", "720", "1080", "1440", "2160"]:
-                video_format = f"bv*[height<=?{i}][ext=mp4]+ba[ext=m4a]/b[height<=?{i}]"
+                video_format = (
+                    f"bv*[height<=?{i}][ext=mp4]+ba[ext=m4a]/b[height<=?{i}]"
+                )
                 b_data = f"{i}|mp4"
                 self.formats[b_data] = video_format
                 buttons.data_button(f"{i}-mp4", f"ytq {b_data}")
@@ -132,7 +141,9 @@ class YtSelection:
                         ):
                             if item.get("audio_ext") == "m4a":
                                 self._is_m4a = True
-                            b_name = f"{item.get('acodec') or format_id}-{item['ext']}"
+                            b_name = (
+                                f"{item.get('acodec') or format_id}-{item['ext']}"
+                            )
                             v_format = format_id
                         elif item.get("height"):
                             height = item["height"]
@@ -154,7 +165,9 @@ class YtSelection:
                 for b_name, tbr_dict in self.formats.items():
                     if len(tbr_dict) == 1:
                         tbr, v_list = next(iter(tbr_dict.items()))
-                        buttonName = f"{b_name} ({get_readable_file_size(v_list[0])})"
+                        buttonName = (
+                            f"{b_name} ({get_readable_file_size(v_list[0])})"
+                        )
                         buttons.data_button(buttonName, f"ytq sub {b_name} {tbr}")
                     else:
                         buttons.data_button(b_name, f"ytq dict {b_name}")
@@ -166,7 +179,9 @@ class YtSelection:
             self._main_buttons = buttons.build_menu(2)
             msg = f"Choose Video Quality:\nTimeout: {get_readable_time(self._timeout - (time() - self._time))}"
         self._reply_to = await send_message(
-            self.listener.message, msg, self._main_buttons
+            self.listener.message,
+            msg,
+            self._main_buttons,
         )
         await self._event_handler()
         if not self.listener.is_cancelled:
@@ -242,7 +257,7 @@ async def _mdisk(link, name):
     key = link.split("/")[-1]
     async with AsyncClient(verify=False) as client:
         resp = await client.get(
-            f"https://diskuploader.entertainvideo.com/v1/file/cdnurl?param={key}"
+            f"https://diskuploader.entertainvideo.com/v1/file/cdnurl?param={key}",
         )
     if resp.status_code == 200:
         resp_json = resp.json()
@@ -358,7 +373,7 @@ class YtDlp(TaskListener):
         self.thumbnail_layout = args["-tl"]
         self.as_doc = args["-doc"]
         self.as_med = args["-med"]
-        self.folder_name = f"/{args["-m"]}" if len(args["-m"]) > 0 else ""
+        self.folder_name = f"/{args['-m']}" if len(args["-m"]) > 0 else ""
         self.bot_trans = args["-bt"]
         self.user_trans = args["-ut"]
 
@@ -397,7 +412,7 @@ class YtDlp(TaskListener):
                                 self.folder_name: {
                                     "total": self.multi,
                                     "tasks": {self.mid},
-                                }
+                                },
                             }
                 elif self.same_dir:
                     async with task_dict_lock:
@@ -421,7 +436,9 @@ class YtDlp(TaskListener):
 
         if not is_url(self.link):
             await send_message(
-                self.message, COMMAND_USAGE["yt"][0], COMMAND_USAGE["yt"][1]
+                self.message,
+                COMMAND_USAGE["yt"][0],
+                COMMAND_USAGE["yt"][1],
             )
             await self.remove_from_same_dir()
             return
@@ -444,8 +461,7 @@ class YtDlp(TaskListener):
                     if value.startswith("ba/b-"):
                         qual = value
                         continue
-                    else:
-                        qual = value
+                    qual = value
                 options[key] = value
         options["playlist_items"] = "0"
         try:

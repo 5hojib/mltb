@@ -1,30 +1,32 @@
-from aiofiles.os import remove, path as aiopath, makedirs
 from asyncio import sleep
 from functools import partial
 from html import escape
 from io import BytesIO
 from os import getcwd
-from pyrogram.filters import create
-from pyrogram.handlers import MessageHandler
 from time import time
 
-from .. import user_data, excluded_extensions, auth_chats, sudo_users
-from ..core.config_manager import Config
-from ..core.mltb_client import TgClient
-from ..helper.ext_utils.db_handler import database
-from ..helper.ext_utils.media_utils import create_thumb
-from ..helper.telegram_helper.button_build import ButtonMaker
-from bot.helper.ext_utils.help_messages import user_settings_text
-from ..helper.ext_utils.bot_utils import (
-    update_user_ldata,
-    new_task,
+from aiofiles.os import makedirs, remove
+from aiofiles.os import path as aiopath
+from pyrogram.filters import create
+from pyrogram.handlers import MessageHandler
+
+from bot import auth_chats, excluded_extensions, sudo_users, user_data
+from bot.core.config_manager import Config
+from bot.core.mltb_client import TgClient
+from bot.helper.ext_utils.bot_utils import (
     get_size_bytes,
+    new_task,
+    update_user_ldata,
 )
-from ..helper.telegram_helper.message_utils import (
-    send_message,
+from bot.helper.ext_utils.db_handler import database
+from bot.helper.ext_utils.help_messages import user_settings_text
+from bot.helper.ext_utils.media_utils import create_thumb
+from bot.helper.telegram_helper.button_build import ButtonMaker
+from bot.helper.telegram_helper.message_utils import (
+    delete_message,
     edit_message,
     send_file,
-    delete_message,
+    send_message,
 )
 
 handler_dict = {}
@@ -53,14 +55,16 @@ async def get_user_settings(from_user, stype="main"):
         buttons.data_button("Thumbnail", f"userset {user_id} menu THUMBNAIL")
         thumbmsg = "Exists" if await aiopath.exists(thumbpath) else "Not Exists"
         buttons.data_button(
-            "Leech Split Size", f"userset {user_id} menu LEECH_SPLIT_SIZE"
+            "Leech Split Size",
+            f"userset {user_id} menu LEECH_SPLIT_SIZE",
         )
         if user_dict.get("LEECH_SPLIT_SIZE", False):
             split_size = user_dict["LEECH_SPLIT_SIZE"]
         else:
             split_size = Config.LEECH_SPLIT_SIZE
         buttons.data_button(
-            "Leech Destination", f"userset {user_id} menu LEECH_DUMP_CHAT"
+            "Leech Destination",
+            f"userset {user_id} menu LEECH_DUMP_CHAT",
         )
         if user_dict.get("LEECH_DUMP_CHAT", False):
             leech_dest = user_dict["LEECH_DUMP_CHAT"]
@@ -69,92 +73,95 @@ async def get_user_settings(from_user, stype="main"):
         else:
             leech_dest = "None"
         buttons.data_button(
-            "Leech Prefix", f"userset {user_id} menu LEECH_FILENAME_PREFIX"
+            "Leech Prefix",
+            f"userset {user_id} menu LEECH_FILENAME_PREFIX",
         )
         if user_dict.get("LEECH_FILENAME_PREFIX", False):
             lprefix = user_dict["LEECH_FILENAME_PREFIX"]
-        elif "LEECH_FILENAME_PREFIX" not in user_dict and Config.LEECH_FILENAME_PREFIX:
+        elif (
+            "LEECH_FILENAME_PREFIX" not in user_dict and Config.LEECH_FILENAME_PREFIX
+        ):
             lprefix = Config.LEECH_FILENAME_PREFIX
         else:
             lprefix = "None"
-        if (
-            user_dict.get("AS_DOCUMENT", False)
-            or "AS_DOCUMENT" not in user_dict
-            and Config.AS_DOCUMENT
+        if user_dict.get("AS_DOCUMENT", False) or (
+            "AS_DOCUMENT" not in user_dict and Config.AS_DOCUMENT
         ):
             ltype = "DOCUMENT"
-            buttons.data_button("Send As Media", f"userset {user_id} tog AS_DOCUMENT f")
+            buttons.data_button(
+                "Send As Media", f"userset {user_id} tog AS_DOCUMENT f"
+            )
         else:
             ltype = "MEDIA"
             buttons.data_button(
-                "Send As Document", f"userset {user_id} tog AS_DOCUMENT t"
+                "Send As Document",
+                f"userset {user_id} tog AS_DOCUMENT t",
             )
-        if (
-            user_dict.get("EQUAL_SPLITS", False)
-            or "EQUAL_SPLITS" not in user_dict
-            and Config.EQUAL_SPLITS
+        if user_dict.get("EQUAL_SPLITS", False) or (
+            "EQUAL_SPLITS" not in user_dict and Config.EQUAL_SPLITS
         ):
             buttons.data_button(
-                "Disable Equal Splits", f"userset {user_id} tog EQUAL_SPLITS f"
+                "Disable Equal Splits",
+                f"userset {user_id} tog EQUAL_SPLITS f",
             )
             equal_splits = "Enabled"
         else:
             buttons.data_button(
-                "Enable Equal Splits", f"userset {user_id} tog EQUAL_SPLITS t"
+                "Enable Equal Splits",
+                f"userset {user_id} tog EQUAL_SPLITS t",
             )
             equal_splits = "Disabled"
-        if (
-            user_dict.get("MEDIA_GROUP", False)
-            or "MEDIA_GROUP" not in user_dict
-            and Config.MEDIA_GROUP
+        if user_dict.get("MEDIA_GROUP", False) or (
+            "MEDIA_GROUP" not in user_dict and Config.MEDIA_GROUP
         ):
             buttons.data_button(
-                "Disable Media Group", f"userset {user_id} tog MEDIA_GROUP f"
+                "Disable Media Group",
+                f"userset {user_id} tog MEDIA_GROUP f",
             )
             media_group = "Enabled"
         else:
             buttons.data_button(
-                "Enable Media Group", f"userset {user_id} tog MEDIA_GROUP t"
+                "Enable Media Group",
+                f"userset {user_id} tog MEDIA_GROUP t",
             )
             media_group = "Disabled"
         if (
-            TgClient.IS_PREMIUM_USER
-            and user_dict.get("USER_TRANSMISSION", False)
-            or "USER_TRANSMISSION" not in user_dict
-            and Config.USER_TRANSMISSION
-        ):
+            TgClient.IS_PREMIUM_USER and user_dict.get("USER_TRANSMISSION", False)
+        ) or ("USER_TRANSMISSION" not in user_dict and Config.USER_TRANSMISSION):
             buttons.data_button(
-                "Leech by Bot", f"userset {user_id} tog USER_TRANSMISSION f"
+                "Leech by Bot",
+                f"userset {user_id} tog USER_TRANSMISSION f",
             )
             leech_method = "user"
         elif TgClient.IS_PREMIUM_USER:
             leech_method = "bot"
             buttons.data_button(
-                "Leech by User", f"userset {user_id} tog USER_TRANSMISSION t"
+                "Leech by User",
+                f"userset {user_id} tog USER_TRANSMISSION t",
             )
         else:
             leech_method = "bot"
 
-        if (
-            TgClient.IS_PREMIUM_USER
-            and user_dict.get("HYBRID_LEECH", False)
-            or "HYBRID_LEECH" not in user_dict
-            and Config.HYBRID_LEECH
+        if (TgClient.IS_PREMIUM_USER and user_dict.get("HYBRID_LEECH", False)) or (
+            "HYBRID_LEECH" not in user_dict and Config.HYBRID_LEECH
         ):
             hybrid_leech = "Enabled"
             buttons.data_button(
-                "Disable Hybride Leech", f"userset {user_id} tog HYBRID_LEECH f"
+                "Disable Hybride Leech",
+                f"userset {user_id} tog HYBRID_LEECH f",
             )
         elif TgClient.IS_PREMIUM_USER:
             hybrid_leech = "Disabled"
             buttons.data_button(
-                "Enable HYBRID Leech", f"userset {user_id} tog HYBRID_LEECH t"
+                "Enable HYBRID Leech",
+                f"userset {user_id} tog HYBRID_LEECH t",
             )
         else:
             hybrid_leech = "Disabled"
 
         buttons.data_button(
-            "Thumbnail Layout", f"userset {user_id} menu THUMBNAIL_LAYOUT"
+            "Thumbnail Layout",
+            f"userset {user_id} menu THUMBNAIL_LAYOUT",
         )
         if user_dict.get("THUMBNAIL_LAYOUT", False):
             thumb_layout = user_dict["THUMBNAIL_LAYOUT"]
@@ -181,7 +188,8 @@ Thumbnail Layout is <b>{thumb_layout}</b>
     elif stype == "rclone":
         buttons.data_button("Rclone Config", f"userset {user_id} menu RCLONE_CONFIG")
         buttons.data_button(
-            "Default Rclone Path", f"userset {user_id} menu RCLONE_PATH"
+            "Default Rclone Path",
+            f"userset {user_id} menu RCLONE_PATH",
         )
         buttons.data_button("Back", f"userset {user_id} back")
         buttons.data_button("Close", f"userset {user_id} close")
@@ -199,18 +207,18 @@ Rclone Path is <code>{rccpath}</code>"""
         buttons.data_button("token.pickle", f"userset {user_id} menu TOKEN_PICKLE")
         buttons.data_button("Default Gdrive ID", f"userset {user_id} menu GDRIVE_ID")
         buttons.data_button("Index URL", f"userset {user_id} menu INDEX_URL")
-        if (
-            user_dict.get("STOP_DUPLICATE", False)
-            or "STOP_DUPLICATE" not in user_dict
-            and Config.STOP_DUPLICATE
+        if user_dict.get("STOP_DUPLICATE", False) or (
+            "STOP_DUPLICATE" not in user_dict and Config.STOP_DUPLICATE
         ):
             buttons.data_button(
-                "Disable Stop Duplicate", f"userset {user_id} tog STOP_DUPLICATE f"
+                "Disable Stop Duplicate",
+                f"userset {user_id} tog STOP_DUPLICATE f",
             )
             sd_msg = "Enabled"
         else:
             buttons.data_button(
-                "Enable Stop Duplicate", f"userset {user_id} tog STOP_DUPLICATE t"
+                "Enable Stop Duplicate",
+                f"userset {user_id} tog STOP_DUPLICATE t",
             )
             sd_msg = "Disabled"
         buttons.data_button("Back", f"userset {user_id} back")
@@ -222,7 +230,9 @@ Rclone Path is <code>{rccpath}</code>"""
             gdrive_id = GDID
         else:
             gdrive_id = "None"
-        index = user_dict["INDEX_URL"] if user_dict.get("INDEX_URL", False) else "None"
+        index = (
+            user_dict["INDEX_URL"] if user_dict.get("INDEX_URL", False) else "None"
+        )
         text = f"""<u>Gdrive API Settings for {name}</u>
 Gdrive Token <b>{tokenmsg}</b>
 Gdrive ID is <code>{gdrive_id}</code>
@@ -234,7 +244,11 @@ Stop Duplicate is <b>{sd_msg}</b>"""
         buttons.data_button("Gdrive API", f"userset {user_id} gdrive")
 
         upload_paths = user_dict.get("UPLOAD_PATHS", {})
-        if not upload_paths and "UPLOAD_PATHS" not in user_dict and Config.UPLOAD_PATHS:
+        if (
+            not upload_paths
+            and "UPLOAD_PATHS" not in user_dict
+            and Config.UPLOAD_PATHS
+        ):
             upload_paths = Config.UPLOAD_PATHS
         else:
             upload_paths = "None"
@@ -248,7 +262,8 @@ Stop Duplicate is <b>{sd_msg}</b>"""
         du = "Gdrive API" if default_upload == "gd" else "Rclone"
         dur = "Gdrive API" if default_upload != "gd" else "Rclone"
         buttons.data_button(
-            f"Upload using {dur}", f"userset {user_id} {default_upload}"
+            f"Upload using {dur}",
+            f"userset {user_id} {default_upload}",
         )
 
         user_tokens = user_dict.get("USER_TOKENS", False)
@@ -260,7 +275,8 @@ Stop Duplicate is <b>{sd_msg}</b>"""
         )
 
         buttons.data_button(
-            "Excluded Extensions", f"userset {user_id} menu EXCLUDED_EXTENSIONS"
+            "Excluded Extensions",
+            f"userset {user_id} menu EXCLUDED_EXTENSIONS",
         )
         if user_dict.get("EXCLUDED_EXTENSIONS", False):
             ex_ex = user_dict["EXCLUDED_EXTENSIONS"]
@@ -270,9 +286,13 @@ Stop Duplicate is <b>{sd_msg}</b>"""
             ex_ex = "None"
 
         ns_msg = "Added" if user_dict.get("NAME_SUBSTITUTE", False) else "None"
-        buttons.data_button("Name Subtitute", f"userset {user_id} menu NAME_SUBSTITUTE")
+        buttons.data_button(
+            "Name Subtitute", f"userset {user_id} menu NAME_SUBSTITUTE"
+        )
 
-        buttons.data_button("YT-DLP Options", f"userset {user_id} menu YT_DLP_OPTIONS")
+        buttons.data_button(
+            "YT-DLP Options", f"userset {user_id} menu YT_DLP_OPTIONS"
+        )
         if user_dict.get("YT_DLP_OPTIONS", False):
             ytopt = user_dict["YT_DLP_OPTIONS"]
         elif "YT_DLP_OPTIONS" not in user_dict and Config.YT_DLP_OPTIONS:
@@ -422,7 +442,7 @@ async def get_menu(option, message, user_id):
     if option in user_dict and key != "file":
         buttons.data_button("Reset", f"userset {user_id} reset {option}")
     buttons.data_button("Remove", f"userset {user_id} remove {option}")
-    if option in user_dict and user_dict[option]:
+    if user_dict.get(option):
         if option == "THUMBNAIL":
             buttons.data_button("View", f"userset {user_id} view THUMBNAIL")
         if option in ["YT_DLP_OPTIONS", "FFMPEG_CMDS", "UPLOAD_PATHS"]:
@@ -456,11 +476,12 @@ async def event_handler(client, query, pfunc, photo=False, document=False):
             mtype = event.text
         user = event.from_user or event.sender_chat
         return bool(
-            user.id == user_id and event.chat.id == query.message.chat.id and mtype
+            user.id == user_id and event.chat.id == query.message.chat.id and mtype,
         )
 
     handler = client.add_handler(
-        MessageHandler(pfunc, filters=create(event_filter)), group=-1
+        MessageHandler(pfunc, filters=create(event_filter)),
+        group=-1,
     )
 
     while handler_dict[user_id]:

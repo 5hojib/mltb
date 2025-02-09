@@ -1,23 +1,26 @@
-from aiofiles.os import remove, path as aiopath
+import contextlib
 from asyncio import sleep
 from time import time
 
-from ... import (
+from aiofiles.os import path as aiopath
+from aiofiles.os import remove
+
+from bot import (
+    LOGGER,
+    intervals,
+    qb_listener_lock,
+    qb_torrents,
     task_dict,
     task_dict_lock,
-    intervals,
-    qb_torrents,
-    qb_listener_lock,
-    LOGGER,
 )
-from ...core.config_manager import Config
-from ...core.torrent_manager import TorrentManager
-from ..ext_utils.bot_utils import new_task
-from ..ext_utils.files_utils import clean_unwanted
-from ..ext_utils.status_utils import get_readable_time, get_task_by_gid
-from ..ext_utils.task_manager import stop_duplicate_check
-from ..mirror_leech_utils.status_utils.qbit_status import QbittorrentStatus
-from ..telegram_helper.message_utils import update_status_message
+from bot.core.config_manager import Config
+from bot.core.torrent_manager import TorrentManager
+from bot.helper.ext_utils.bot_utils import new_task
+from bot.helper.ext_utils.files_utils import clean_unwanted
+from bot.helper.ext_utils.status_utils import get_readable_time, get_task_by_gid
+from bot.helper.ext_utils.task_manager import stop_duplicate_check
+from bot.helper.mirror_leech_utils.status_utils.qbit_status import QbittorrentStatus
+from bot.helper.telegram_helper.message_utils import update_status_message
 
 
 async def _remove_torrent(hash_, tag):
@@ -53,9 +56,9 @@ async def _on_seed_finish(tor):
 async def _stop_duplicate(tor):
     if task := await get_task_by_gid(tor.hash[:12]):
         if task.listener.stop_duplicate:
-            task.listener.name = tor.content_path.rsplit("/", 1)[-1].rsplit(".!qB", 1)[
-                0
-            ]
+            task.listener.name = tor.content_path.rsplit("/", 1)[-1].rsplit(
+                ".!qB", 1
+            )[0]
             msg, button = await stop_duplicate_check(task.listener)
             if msg:
                 _on_download_error(msg, tor, button)
@@ -74,10 +77,8 @@ async def _on_download_complete(tor):
             res = await TorrentManager.qbittorrent.torrents.files(ext_hash)
             for f in res:
                 if f.priority == 0 and await aiopath.exists(f"{path}/{f.name}"):
-                    try:
+                    with contextlib.suppress(Exception):
                         await remove(f"{path}/{f.name}")
-                    except:
-                        pass
         await task.listener.on_download_complete()
         if intervals["stopAll"]:
             return
@@ -86,7 +87,8 @@ async def _on_download_complete(tor):
                 if task.listener.mid in task_dict:
                     removed = False
                     task_dict[task.listener.mid] = QbittorrentStatus(
-                        task.listener, True
+                        task.listener,
+                        True,
                     )
                 else:
                     removed = True
@@ -130,7 +132,7 @@ async def _qb_listener():
                             await _on_download_error("Dead Torrent!", tor_info)
                         else:
                             await TorrentManager.qbittorrent.torrents.reannounce(
-                                [tor_info.hash]
+                                [tor_info.hash],
                             )
                     elif state == "downloading":
                         qb_torrents[tag]["stalled_time"] = time()
@@ -147,7 +149,7 @@ async def _qb_listener():
                             msg += f"Size: {tor_info.size} Total Size: {tor_info.total_size}"
                             LOGGER.warning(msg)
                             await TorrentManager.qbittorrent.torrents.recheck(
-                                [tor_info.hash]
+                                [tor_info.hash],
                             )
                             qb_torrents[tag]["rechecked"] = True
                         elif (
@@ -158,13 +160,16 @@ async def _qb_listener():
                             await _on_download_error("Dead Torrent!", tor_info)
                         else:
                             await TorrentManager.qbittorrent.torrents.reannounce(
-                                [tor_info.hash]
+                                [tor_info.hash],
                             )
                     elif state == "missingFiles":
-                        await TorrentManager.qbittorrent.torrents.recheck([tor_info.hash])
+                        await TorrentManager.qbittorrent.torrents.recheck(
+                            [tor_info.hash]
+                        )
                     elif state == "error":
                         await _on_download_error(
-                            "No enough space for this torrent on device", tor_info
+                            "No enough space for this torrent on device",
+                            tor_info,
                         )
                     elif (
                         int(tor_info.completion_on.timestamp()) != -1

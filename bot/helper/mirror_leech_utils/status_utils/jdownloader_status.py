@@ -1,8 +1,8 @@
 from time import time
 
-from .... import LOGGER, jd_listener_lock, jd_downloads
-from ....core.jdownloader_booter import jdownloader
-from ...ext_utils.status_utils import (
+from bot import LOGGER, jd_downloads, jd_listener_lock
+from bot.core.jdownloader_booter import jdownloader
+from bot.helper.ext_utils.status_utils import (
     MirrorStatus,
     get_readable_file_size,
     get_readable_time,
@@ -59,8 +59,8 @@ async def get_download(gid, old_info):
                     "eta": True,
                     "status": True,
                     "hosts": True,
-                }
-            ]
+                },
+            ],
         )
         return _get_combined_info(result, old_info) if len(result) > 1 else result[0]
     except:
@@ -96,7 +96,9 @@ class JDownloaderStatus:
         return get_readable_file_size(self._info.get("bytesTotal", 0))
 
     def eta(self):
-        return get_readable_time(eta) if (eta := self._info.get("eta", False)) else "-"
+        return (
+            get_readable_time(eta) if (eta := self._info.get("eta", False)) else "-"
+        )
 
     async def status(self):
         await self._update()
@@ -104,8 +106,7 @@ class JDownloaderStatus:
         if len(state) == 0:
             if self._info.get("bytesLoaded", 0) == 0:
                 return MirrorStatus.STATUS_QUEUEDL
-            else:
-                return MirrorStatus.STATUS_DOWNLOAD
+            return MirrorStatus.STATUS_DOWNLOAD
         return MirrorStatus.STATUS_QUEUEDL if state == "Jdlimit" else state
 
     def task(self):
@@ -118,7 +119,7 @@ class JDownloaderStatus:
         self.listener.is_cancelled = True
         LOGGER.info(f"Cancelling Download: {self.name()}")
         await jdownloader.device.downloads.remove_links(
-            package_ids=jd_downloads[self._gid]["ids"]
+            package_ids=jd_downloads[self._gid]["ids"],
         )
         async with jd_listener_lock:
             del jd_downloads[self._gid]
